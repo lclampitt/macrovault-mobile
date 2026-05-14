@@ -1,52 +1,60 @@
-import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
+import { useAuth } from '../lib/auth-context';
 import { Colors } from '../constants/Colors';
+import { ThemedButton } from '../components/ThemedButton';
 
 export default function HomeScreen() {
-  const [status, setStatus] = useState('Testing connection...');
+  const { user } = useAuth();
 
-  useEffect(() => {
-    async function testConnection() {
-      try {
-        const { data, error } = await supabase.auth.getSession();
-        if (error) {
-          setStatus(`Error: ${error.message}`);
-        } else {
-          setStatus(`Connected! Session: ${data.session ? 'logged in' : 'no session'}`);
-        }
-      } catch (e: any) {
-        setStatus(`Crash: ${e.message}`);
-      }
-    }
-    testConnection();
-  }, []);
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+  }
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>MacroVault Mobile</Text>
-      <Text style={styles.status}>{status}</Text>
-    </View>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <View style={styles.center}>
+          <Text style={styles.title}>MacroVault</Text>
+          <Text style={styles.welcome}>Welcome, {user?.email ?? 'there'}</Text>
+          <Text style={styles.muted}>Home dashboard coming in Phase 3</Text>
+        </View>
+        <ThemedButton title="Sign Out" variant="ghost" onPress={handleSignOut} />
+      </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  safeArea: {
     flex: 1,
     backgroundColor: Colors.background,
+  },
+  container: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  center: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   title: {
     color: Colors.textPrimary,
-    fontSize: 28,
+    fontSize: 32,
     fontWeight: '700',
-    marginBottom: 16,
+    letterSpacing: -0.5,
+    marginBottom: 12,
   },
-  status: {
-    color: Colors.accentLight,
+  welcome: {
+    color: Colors.textPrimary,
+    fontSize: 16,
+    marginBottom: 6,
+  },
+  muted: {
+    color: Colors.textMuted,
     fontSize: 14,
-    textAlign: 'center',
   },
 });
