@@ -1,9 +1,11 @@
 export const Colors = {
   background: '#0f1117',
   surface: '#14171E',
+  surfaceMuted: '#1E2536',
   accent: '#1D9E75',
   accentLight: '#5DCAA5',
   accentDark: '#0F6E56',
+  accentSoft: 'rgba(29, 158, 117, 0.14)',
   textPrimary: '#F4F5F7',
   textSecondary: '#9AA0A6',
   textMuted: '#6B7280',
@@ -12,4 +14,5 @@ export const Colors = {
   error: '#EF4444',
   errorBg: 'rgba(239, 68, 68, 0.08)',
   errorBorder: 'rgba(239, 68, 68, 0.2)',
+  overlay: 'rgba(0, 0, 0, 0.6)',
 };

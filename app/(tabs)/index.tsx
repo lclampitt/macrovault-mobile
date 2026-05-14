@@ -1,26 +1,17 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { supabase } from '../lib/supabase';
-import { useAuth } from '../lib/auth-context';
-import { Colors } from '../constants/Colors';
-import { ThemedButton } from '../components/ThemedButton';
+import { useAuth } from '../../lib/auth-context';
+import { Colors } from '../../constants/Colors';
 
 export default function HomeScreen() {
   const { user } = useAuth();
 
-  async function handleSignOut() {
-    await supabase.auth.signOut();
-  }
-
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <View style={styles.center}>
-          <Text style={styles.title}>MacroVault</Text>
-          <Text style={styles.welcome}>Welcome, {user?.email ?? 'there'}</Text>
-          <Text style={styles.muted}>Home dashboard coming in Phase 3</Text>
-        </View>
-        <ThemedButton title="Sign Out" variant="ghost" onPress={handleSignOut} />
+      <View style={styles.center}>
+        <Text style={styles.title}>MacroVault</Text>
+        <Text style={styles.welcome}>Welcome, {user?.email ?? 'there'}</Text>
+        <Text style={styles.muted}>Home dashboard coming in Phase 3b</Text>
       </View>
     </SafeAreaView>
   );
@@ -31,15 +22,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
-  container: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingVertical: 24,
-  },
   center: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
   },
   title: {
     color: Colors.textPrimary,
