@@ -1,28 +1,42 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import StatCardSkeleton from './skeletons/StatCardSkeleton';
 
 type Props = {
   completed: number;
   target: number;
-  status: string;
+  loading: boolean;
+  error?: string | null;
 };
 
-export default function ThisWeekCard({ completed, target, status }: Props) {
+export default function ThisWeekCard({ completed, target, loading, error }: Props) {
+  if (loading) return <StatCardSkeleton />;
+
   const cells = Array.from({ length: target }, (_, i) => i < completed);
+  const status = completed === 0 ? 'starting fresh' : 'workouts logged';
 
   return (
     <View style={styles.card}>
       <Text style={styles.label}>THIS WEEK</Text>
-      <Text style={styles.value}>
-        {completed}
-        <Text style={styles.valueSub}>/{target}</Text>
-      </Text>
-      <Text style={styles.caption}>{status}</Text>
-      <View style={styles.strip}>
-        {cells.map((on, i) => (
-          <View key={i} style={[styles.cell, on && styles.cellFilled]} />
-        ))}
-      </View>
+      {error ? (
+        <>
+          <Text style={styles.value}>—</Text>
+          <Text style={styles.errorText}>Failed to load</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.value}>
+            {completed}
+            <Text style={styles.valueSub}>/{target}</Text>
+          </Text>
+          <Text style={styles.caption}>{status}</Text>
+          <View style={styles.strip}>
+            {cells.map((on, i) => (
+              <View key={i} style={[styles.cell, on && styles.cellFilled]} />
+            ))}
+          </View>
+        </>
+      )}
     </View>
   );
 }
@@ -59,6 +73,11 @@ const styles = StyleSheet.create({
   },
   caption: {
     color: Colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  errorText: {
+    color: Colors.error,
     fontSize: 10,
     marginTop: 2,
   },

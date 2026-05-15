@@ -3,60 +3,76 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import QuickActionHero from './QuickActionHero';
 import QuickActionCard from './QuickActionCard';
+import QuickActionSkeleton from './skeletons/QuickActionSkeleton';
 
 type Props = {
-  heroTitle: string;
   heroKicker: string;
+  heroTitle: string;
   heroSubtitle: string;
   workoutSubtitle: string;
   weightSubtitle: string;
+  loading: boolean;
 };
 
 export default function QuickActions({
-  heroTitle,
   heroKicker,
+  heroTitle,
   heroSubtitle,
   workoutSubtitle,
   weightSubtitle,
+  loading,
 }: Props) {
   return (
     <View style={styles.wrapper}>
       <Text style={styles.heading}>QUICK ACTIONS</Text>
 
       <View style={styles.heroWrap}>
-        <QuickActionHero
-          kicker={heroKicker}
-          title={heroTitle}
-          subtitle={heroSubtitle}
-          onPress={() => console.log('TODO: hero action -> meal logging')}
-        />
+        {loading ? (
+          <QuickActionSkeleton variant="hero" />
+        ) : (
+          <QuickActionHero
+            kicker={heroKicker}
+            title={heroTitle}
+            subtitle={heroSubtitle}
+            onPress={() => console.log('TODO: hero action -> meal logging')}
+          />
+        )}
       </View>
 
       <View style={styles.secondaryRow}>
-        <QuickActionCard
-          icon={
-            <MaterialCommunityIcons
-              name="dumbbell"
-              size={17}
-              color={Colors.textSecondary}
+        {loading ? (
+          <>
+            <QuickActionSkeleton variant="small" />
+            <QuickActionSkeleton variant="small" />
+          </>
+        ) : (
+          <>
+            <QuickActionCard
+              icon={
+                <MaterialCommunityIcons
+                  name="dumbbell"
+                  size={17}
+                  color={Colors.textSecondary}
+                />
+              }
+              title="Workout"
+              subtitle={workoutSubtitle}
+              onPress={() => console.log('TODO: workout quick action')}
             />
-          }
-          title="Workout"
-          subtitle={workoutSubtitle}
-          onPress={() => console.log('TODO: workout quick action')}
-        />
-        <QuickActionCard
-          icon={
-            <MaterialCommunityIcons
-              name="scale-bathroom"
-              size={17}
-              color={Colors.textSecondary}
+            <QuickActionCard
+              icon={
+                <MaterialCommunityIcons
+                  name="scale-bathroom"
+                  size={17}
+                  color={Colors.textSecondary}
+                />
+              }
+              title="Weight"
+              subtitle={weightSubtitle}
+              onPress={() => console.log('TODO: weight quick action')}
             />
-          }
-          title="Weight"
-          subtitle={weightSubtitle}
-          onPress={() => console.log('TODO: weight quick action')}
-        />
+          </>
+        )}
       </View>
     </View>
   );

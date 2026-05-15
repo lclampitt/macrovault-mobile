@@ -1,26 +1,54 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import WeightSparkline from './WeightSparkline';
+import StatCardSkeleton from './skeletons/StatCardSkeleton';
 
 type Props = {
-  current: number;
+  current: number | null;
   unit: string;
-  lastUpdated: string;
+  lastAgo: string | null;
   history: number[];
+  loading: boolean;
+  error?: string | null;
 };
 
-export default function WeightCard({ current, unit, lastUpdated, history }: Props) {
+export default function WeightCard({
+  current,
+  unit,
+  lastAgo,
+  history,
+  loading,
+  error,
+}: Props) {
+  if (loading) return <StatCardSkeleton />;
+
   return (
     <View style={styles.card}>
       <Text style={styles.label}>WEIGHT</Text>
-      <Text style={styles.value}>
-        {current.toFixed(1)}
-        <Text style={styles.valueSub}> {unit}</Text>
-      </Text>
-      <Text style={styles.caption}>{lastUpdated}</Text>
-      <View style={styles.spark}>
-        <WeightSparkline history={history} height={16} />
-      </View>
+      {error ? (
+        <>
+          <Text style={styles.value}>—</Text>
+          <Text style={styles.errorText}>Failed to load</Text>
+        </>
+      ) : current == null ? (
+        <>
+          <Text style={styles.value}>—</Text>
+          <Text style={styles.caption}>Add your first weight</Text>
+        </>
+      ) : (
+        <>
+          <Text style={styles.value}>
+            {current.toFixed(1)}
+            <Text style={styles.valueSub}> {unit}</Text>
+          </Text>
+          <Text style={styles.caption}>{lastAgo ? `last ${lastAgo}` : ' '}</Text>
+          {history.length >= 2 ? (
+            <View style={styles.spark}>
+              <WeightSparkline history={history} height={16} />
+            </View>
+          ) : null}
+        </>
+      )}
     </View>
   );
 }
@@ -57,6 +85,11 @@ const styles = StyleSheet.create({
   },
   caption: {
     color: Colors.textMuted,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  errorText: {
+    color: Colors.error,
     fontSize: 10,
     marginTop: 2,
   },

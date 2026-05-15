@@ -1,34 +1,43 @@
 import { StyleSheet, View } from 'react-native';
 import ThisWeekCard from './ThisWeekCard';
 import WeightCard from './WeightCard';
+import type { ThisWeekWorkouts } from '../../hooks/useThisWeekWorkouts';
+import type { CurrentWeight } from '../../hooks/useCurrentWeight';
 
 type Props = {
-  thisWeek: {
-    completed: number;
-    target: number;
-    status: string;
-  };
-  weight: {
-    current: number;
-    unit: string;
-    lastUpdated: string;
-    history: number[];
-  };
+  thisWeek: ThisWeekWorkouts;
+  thisWeekLoading: boolean;
+  thisWeekError?: string | null;
+  weight: CurrentWeight;
+  weightUnit: string;
+  weightLoading: boolean;
+  weightError?: string | null;
 };
 
-export default function StatCardRow({ thisWeek, weight }: Props) {
+export default function StatCardRow({
+  thisWeek,
+  thisWeekLoading,
+  thisWeekError,
+  weight,
+  weightUnit,
+  weightLoading,
+  weightError,
+}: Props) {
   return (
     <View style={styles.row}>
       <ThisWeekCard
         completed={thisWeek.completed}
         target={thisWeek.target}
-        status={thisWeek.status}
+        loading={thisWeekLoading}
+        error={thisWeekError}
       />
       <WeightCard
         current={weight.current}
-        unit={weight.unit}
-        lastUpdated={weight.lastUpdated}
+        unit={weightUnit}
+        lastAgo={weight.lastAgo}
         history={weight.history}
+        loading={weightLoading}
+        error={weightError}
       />
     </View>
   );

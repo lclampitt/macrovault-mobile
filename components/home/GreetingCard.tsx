@@ -1,24 +1,31 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
+import type { TodayMacros } from '../../hooks/useTodayMacros';
+import type { UserGoals } from '../../hooks/useUserGoals';
 import CaloriesRing from './CaloriesRing';
 import MacroRow from './MacroRow';
-
-type Macro = { current: number; goal: number; unit: string };
+import GreetingCardSkeleton from './skeletons/GreetingCardSkeleton';
 
 type Props = {
   time: string;
   period: string;
-  calories: { remaining: number; consumed: number; goal: number };
-  macros: {
-    protein: Macro;
-    carbs: Macro;
-    fat: Macro;
-  };
+  macros: TodayMacros;
+  goals: UserGoals | null;
+  loading: boolean;
+  error?: string | null;
 };
 
-export default function GreetingCard({ time, period, calories, macros }: Props) {
-  const isEmpty = calories.consumed === 0;
-  const kcalDisplay = isEmpty ? '—' : calories.consumed.toLocaleString();
+export default function GreetingCard({ time, period, macros, goals, loading, error }: Props) {
+  if (loading) return <GreetingCardSkeleton />;
+
+  const goalCalories = goals?.calories ?? 0;
+  const goalProtein = goals?.protein ?? 0;
+  const goalCarbs = goals?.carbs ?? 0;
+  const goalFat = goals?.fat ?? 0;
+
+  const isEmpty = macros.calories === 0;
+  const kcalDisplay = isEmpty ? '—' : macros.calories.toLocaleString();
+  const remaining = Math.max(0, goalCalories - macros.calories);
 
   return (
     <View style={styles.card}>
@@ -33,38 +40,49 @@ export default function GreetingCard({ time, period, calories, macros }: Props) 
         <View style={styles.left}>
           <Text style={styles.label}>CALORIES TODAY</Text>
           <Text style={[styles.kcal, isEmpty && styles.kcalEmpty]}>{kcalDisplay}</Text>
-          <Text style={styles.remaining}>
-            <Text style={[styles.remainingValue, isEmpty && styles.remainingValueMuted]}>
-              {isEmpty
-                ? `${calories.remaining.toLocaleString()} kcal`
-                : `${Math.max(0, calories.goal - calories.consumed).toLocaleString()} kcal`}
+          {error ? (
+            <Text style={styles.errorText}>Failed to load · pull to retry</Text>
+          ) : isEmpty ? (
+            goalCalories > 0 ? (
+              <Text style={styles.remaining}>
+                <Text style={styles.remainingValueMuted}>
+                  {goalCalories.toLocaleString()} kcal
+                </Text>{' '}
+                to spend
+              </Text>
+            ) : (
+              <Text style={styles.remaining}>Set a calorie goal to get started.</Text>
+            )
+          ) : (
+            <Text style={styles.remaining}>
+              <Text style={styles.remainingValue}>{remaining.toLocaleString()} kcal</Text>
+              {goalCalories > 0 ? ` left · ${goalCalories.toLocaleString()} target` : ' logged'}
             </Text>
-            {isEmpty ? ' to spend' : ` left · ${calories.goal.toLocaleString()} target`}
-          </Text>
+          )}
         </View>
-        <CaloriesRing consumed={calories.consumed} goal={calories.goal} size={76} />
+        <CaloriesRing consumed={macros.calories} goal={goalCalories} size={76} />
       </View>
 
       <View style={styles.bars}>
         <MacroRow
           label="Protein"
-          current={macros.protein.current}
-          goal={macros.protein.goal}
-          unit={macros.protein.unit}
+          current={macros.protein}
+          goal={goalProtein}
+          unit="g"
           color={Colors.proteinColor}
         />
         <MacroRow
           label="Carbs"
-          current={macros.carbs.current}
-          goal={macros.carbs.goal}
-          unit={macros.carbs.unit}
+          current={macros.carbs}
+          goal={goalCarbs}
+          unit="g"
           color={Colors.carbsColor}
         />
         <MacroRow
           label="Fat"
-          current={macros.fat.current}
-          goal={macros.fat.goal}
-          unit={macros.fat.unit}
+          current={macros.fat}
+          goal={goalFat}
+          unit="g"
           color={Colors.fatColor}
         />
       </View>
@@ -140,6 +158,11 @@ const styles = StyleSheet.create({
   },
   remainingValueMuted: {
     color: Colors.textMuted,
+  },
+  errorText: {
+    fontSize: 12,
+    color: Colors.error,
+    marginTop: 6,
   },
   bars: {
     gap: 9,

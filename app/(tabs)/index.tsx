@@ -5,41 +5,37 @@ import HomeHeader from '../../components/home/HomeHeader';
 import GreetingCard from '../../components/home/GreetingCard';
 import StatCardRow from '../../components/home/StatCardRow';
 import QuickActions from '../../components/home/QuickActions';
+import { useUserGoals } from '../../hooks/useUserGoals';
+import { useTodayMacros } from '../../hooks/useTodayMacros';
+import { useThisWeekWorkouts } from '../../hooks/useThisWeekWorkouts';
+import { useCurrentWeight } from '../../hooks/useCurrentWeight';
+import { fmtClock, getNextMealLabel, getPeriodLabel } from '../../lib/date';
 
-// Mock data for Phase 3b. Real Supabase queries land in Phase 3c.
-// Values intentionally match reference-screenshots/home-1.png and home-2.png.
-const MOCK_DATA = {
-  timeOfDay: '4:22 PM',
-  period: 'AFTERNOON', // MORNING / AFTERNOON / EVENING
-  calories: {
-    remaining: 2180,
-    consumed: 0,
-    goal: 2180,
-  },
-  macros: {
-    protein: { current: 0, goal: 120, unit: 'g' },
-    carbs: { current: 0, goal: 288, unit: 'g' },
-    fat: { current: 0, goal: 61, unit: 'g' },
-  },
-  thisWeek: {
-    completed: 0,
-    target: 4,
-    status: 'starting fresh',
-  },
-  weight: {
-    current: 170.0,
-    unit: 'lb',
-    lastUpdated: 'last 2 wk ago',
-    history: [172, 171.5, 171, 170.5, 170, 170.2, 170],
-  },
-  heroKicker: 'START YOUR DAY',
-  heroTitle: 'Log snack',
-  heroSubtitle: 'scan, search, or from your plan',
-  workoutSubtitle: 'pick a template',
-  weightSubtitle: 'last 170 lb · 2 wk ago',
-};
+const WEIGHT_UNIT = 'lb';
 
 export default function HomeScreen() {
+  const goals = useUserGoals();
+  const macros = useTodayMacros();
+  const workouts = useThisWeekWorkouts();
+  const weight = useCurrentWeight();
+
+  // Greeting card data depends on both macros and goals — wait for both.
+  const greetingLoading = macros.loading || goals.loading;
+  const greetingError = macros.error ?? goals.error ?? null;
+
+  // Quick actions copy depends on macros (kicker/title) and weight (sub).
+  const quickLoading = macros.loading || weight.loading;
+
+  const now = new Date();
+  const heroKicker = macros.data.calories === 0 ? 'START YOUR DAY' : 'NEXT UP';
+  const heroTitle = `Log ${getNextMealLabel(now).toLowerCase()}`;
+  const heroSubtitle = 'scan, search, or from your plan';
+  const weightSubtitle =
+    weight.data.current != null && weight.data.lastAgo
+      ? `last ${Math.round(weight.data.current)} ${WEIGHT_UNIT} · ${weight.data.lastAgo}`
+      : 'no entries yet';
+  const workoutSubtitle = 'pick a template';
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['top']}>
       <HomeHeader />
@@ -48,19 +44,30 @@ export default function HomeScreen() {
         showsVerticalScrollIndicator={false}
       >
         <GreetingCard
-          time={MOCK_DATA.timeOfDay}
-          period={MOCK_DATA.period}
-          calories={MOCK_DATA.calories}
-          macros={MOCK_DATA.macros}
+          time={fmtClock(now)}
+          period={getPeriodLabel(now)}
+          macros={macros.data}
+          goals={goals.data}
+          loading={greetingLoading}
+          error={greetingError}
         />
-        <StatCardRow thisWeek={MOCK_DATA.thisWeek} weight={MOCK_DATA.weight} />
+        <StatCardRow
+          thisWeek={workouts.data}
+          thisWeekLoading={workouts.loading}
+          thisWeekError={workouts.error}
+          weight={weight.data}
+          weightUnit={WEIGHT_UNIT}
+          weightLoading={weight.loading}
+          weightError={weight.error}
+        />
         <View style={styles.actionsSpacer} />
         <QuickActions
-          heroKicker={MOCK_DATA.heroKicker}
-          heroTitle={MOCK_DATA.heroTitle}
-          heroSubtitle={MOCK_DATA.heroSubtitle}
-          workoutSubtitle={MOCK_DATA.workoutSubtitle}
-          weightSubtitle={MOCK_DATA.weightSubtitle}
+          heroKicker={heroKicker}
+          heroTitle={heroTitle}
+          heroSubtitle={heroSubtitle}
+          workoutSubtitle={workoutSubtitle}
+          weightSubtitle={weightSubtitle}
+          loading={quickLoading}
         />
       </ScrollView>
     </SafeAreaView>
