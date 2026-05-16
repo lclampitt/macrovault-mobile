@@ -1,18 +1,15 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth-context';
+import { useProfile } from '../../hooks/useProfile';
 import { Colors } from '../../constants/Colors';
-
-function getInitials(email: string | undefined): string {
-  if (!email) return 'MV';
-  const local = email.split('@')[0] ?? '';
-  if (!local) return 'MV';
-  return local.slice(0, 2).toUpperCase();
-}
+import AvatarDisplay from '../settings/AvatarDisplay';
 
 export default function HomeHeader() {
+  const router = useRouter();
   const { user } = useAuth();
-  const initials = getInitials(user?.email);
+  const { profile } = useProfile();
 
   return (
     <View style={styles.row}>
@@ -37,12 +34,17 @@ export default function HomeHeader() {
           />
         </Pressable>
         <Pressable
-          style={styles.avatar}
           accessibilityRole="button"
-          accessibilityLabel="Profile"
-          onPress={() => console.log('TODO: profile menu')}
+          accessibilityLabel="Open settings"
+          hitSlop={8}
+          onPress={() => router.push('/settings')}
         >
-          <Text style={styles.avatarText}>{initials}</Text>
+          <AvatarDisplay
+            email={user?.email}
+            displayName={profile?.display_name}
+            size={32}
+            variant="filled"
+          />
         </Pressable>
       </View>
     </View>
@@ -91,19 +93,5 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  avatarText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.4,
   },
 });
