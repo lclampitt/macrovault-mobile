@@ -5,6 +5,7 @@ import TemplateCard from './TemplateCard';
 
 type Props = {
   templates: WorkoutTemplate[];
+  onSelect: (template: WorkoutTemplate) => void;
 };
 
 function chunk<T>(arr: T[], size: number): T[][] {
@@ -13,7 +14,7 @@ function chunk<T>(arr: T[], size: number): T[][] {
   return out;
 }
 
-export default function TemplatesGrid({ templates }: Props) {
+export default function TemplatesGrid({ templates, onSelect }: Props) {
   if (templates.length === 0) {
     return (
       <View style={styles.empty}>
@@ -31,7 +32,7 @@ export default function TemplatesGrid({ templates }: Props) {
       {rows.map((row, ri) => (
         <View key={ri} style={styles.row}>
           {row.map((t) => (
-            <TemplateCard key={t.id} template={t} />
+            <TemplateCard key={t.id} template={t} onPress={() => onSelect(t)} />
           ))}
           {row.length === 1 ? <View style={styles.spacer} /> : null}
         </View>

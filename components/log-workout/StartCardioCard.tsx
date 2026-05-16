@@ -2,10 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 
-export default function StartCardioCard() {
+export default function StartCardioCard({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
-      onPress={() => console.log('Start Cardio tapped — Phase 7b')}
+      onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel="Start Cardio, treadmill, bike, rowing and more"

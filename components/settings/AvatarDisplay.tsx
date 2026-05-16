@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 
 type Variant = 'filled' | 'outlined';
 
@@ -26,6 +26,7 @@ export default function AvatarDisplay({
   size = 40,
   variant = 'filled',
 }: Props) {
+  const { theme: c } = useTheme();
   const initials = getInitials(displayName, email);
   const fontSize = Math.max(11, Math.round(size * 0.36));
 
@@ -33,16 +34,20 @@ export default function AvatarDisplay({
     return (
       <View
         style={[
-          styles.outlined,
+          styles.center,
           {
             width: size,
             height: size,
             borderRadius: size / 2,
             borderWidth: Math.max(2, Math.round(size / 26)),
+            backgroundColor: c.accentSoft,
+            borderColor: c.borderAccentSoft,
           },
         ]}
       >
-        <Text style={[styles.outlinedText, { fontSize }]}>{initials}</Text>
+        <Text style={[styles.outlinedText, { fontSize, color: c.accentLight }]}>
+          {initials}
+        </Text>
       </View>
     );
   }
@@ -50,8 +55,13 @@ export default function AvatarDisplay({
   return (
     <View
       style={[
-        styles.filled,
-        { width: size, height: size, borderRadius: size / 2 },
+        styles.center,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: c.accent,
+        },
       ]}
     >
       <Text style={[styles.filledText, { fontSize }]}>{initials}</Text>
@@ -60,8 +70,7 @@ export default function AvatarDisplay({
 }
 
 const styles = StyleSheet.create({
-  filled: {
-    backgroundColor: Colors.accent,
+  center: {
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -70,14 +79,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.4,
   },
-  outlined: {
-    backgroundColor: Colors.accentSoft,
-    borderColor: Colors.borderAccentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   outlinedText: {
-    color: Colors.accentLight,
     fontWeight: '700',
     letterSpacing: -0.2,
   },

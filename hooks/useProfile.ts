@@ -57,13 +57,27 @@ export function useProfile(): State {
       if (!user) return { error: 'Not authenticated' };
       const trimmed = newName.trim();
       try {
-        const { error: updateError } = await supabase
+        // The `profiles` table is column-locked-down (see
+        // supabase_profiles_lockdown_migration.sql): `id` has INSERT-only
+        // grant, no UPDATE grant. A PostgREST upsert compiles to
+        // `INSERT … ON CONFLICT DO UPDATE SET id = excluded.id, …`, which
+        // needs UPDATE(id) and fails with "permission denied". So we UPDATE
+        // the allowed column directly, and only INSERT a fresh row (id +
+        // display_name, both INSERT-granted) if none exists yet.
+        const { data: updated, error: updateError } = await supabase
           .from('profiles')
-          .upsert(
-            { id: user.id, display_name: trimmed },
-            { onConflict: 'id' },
-          );
+          .update({ display_name: trimmed })
+          .eq('id', user.id)
+          .select('display_name');
         if (updateError) throw updateError;
+
+        if (!updated || updated.length === 0) {
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert({ id: user.id, display_name: trimmed });
+          if (insertError) throw insertError;
+        }
+
         setProfile((p) => ({ ...(p ?? {}), display_name: trimmed }));
         return { error: null };
       } catch (e) {

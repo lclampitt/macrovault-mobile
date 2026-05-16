@@ -3,34 +3,44 @@ import { useRouter } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../../lib/auth-context';
 import { useProfile } from '../../hooks/useProfile';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 import AvatarDisplay from '../settings/AvatarDisplay';
 
-export default function HomeHeader() {
+type Props = {
+  onOpenAppearance: () => void;
+};
+
+export default function HomeHeader({ onOpenAppearance }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const { profile } = useProfile();
+  const { theme: c } = useTheme();
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { backgroundColor: c.background }]}>
       <View style={styles.brand}>
-        <View style={styles.brandIcon}>
+        <View style={[styles.brandIcon, { backgroundColor: c.accent }]}>
           <Feather name="lock" size={16} color="#FFFFFF" />
         </View>
-        <Text style={styles.brandText}>MacroVault</Text>
+        <Text style={[styles.brandText, { color: c.textPrimary }]}>
+          MacroVault
+        </Text>
       </View>
 
       <View style={styles.right}>
         <Pressable
-          style={styles.iconButton}
+          style={[
+            styles.iconButton,
+            { backgroundColor: c.surface, borderColor: c.border },
+          ]}
           accessibilityRole="button"
-          accessibilityLabel="Theme"
-          onPress={() => console.log('TODO: theme picker')}
+          accessibilityLabel="Appearance"
+          onPress={onOpenAppearance}
         >
           <MaterialCommunityIcons
             name="palette-outline"
             size={18}
-            color={Colors.textSecondary}
+            color={c.textSecondary}
           />
         </Pressable>
         <Pressable
@@ -58,7 +68,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: Colors.background,
   },
   brand: {
     flexDirection: 'row',
@@ -69,12 +78,10 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
   brandText: {
-    color: Colors.textPrimary,
     fontSize: 17,
     fontWeight: '600',
     letterSpacing: -0.3,
@@ -88,9 +95,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: Colors.surface,
     borderWidth: 1,
-    borderColor: Colors.border,
     alignItems: 'center',
     justifyContent: 'center',
   },

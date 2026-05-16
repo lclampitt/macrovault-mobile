@@ -5,12 +5,13 @@ import type { WorkoutTemplate } from '../../hooks/useWorkoutTemplates';
 
 type Props = {
   template: WorkoutTemplate;
+  onPress: () => void;
 };
 
-export default function TemplateCard({ template }: Props) {
+export default function TemplateCard({ template, onPress }: Props) {
   return (
     <Pressable
-      onPress={() => console.log(`Template "${template.name}" tapped — Phase 7c`)}
+      onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={`${template.name}, ${template.exerciseCount} exercises${

@@ -1,29 +1,44 @@
 import { useCallback, useEffect, useRef } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider, type BottomSheetModal } from '@gorhom/bottom-sheet';
 import { AuthProvider, useAuth } from '../lib/auth-context';
-import { Colors } from '../constants/Colors';
+import { ActiveWorkoutProvider, useActiveWorkout } from '../lib/active-workout-context';
+import { ThemeProvider, useTheme } from '../lib/theme-context';
 import HomeHeader from '../components/home/HomeHeader';
 import { BottomTabBar } from '../components/BottomTabBar';
 import { MoreSheet } from '../components/MoreSheet';
+import { AppearanceSheet } from '../components/AppearanceSheet';
+import ActiveWorkoutBanner from '../components/active-workout/ActiveWorkoutBanner';
 
 const AUTH_ROUTES = ['sign-in', 'sign-up', 'signup-success'] as const;
+// Focused full-screen flows: no persistent top bar / bottom navbar.
+// The active workout keeps the chrome (navbar + in-progress banner), per
+// the web; only the exercise picker is fully focused.
+const FOCUSED_ROUTES = ['exercise-picker'] as const;
 
 function AuthGate() {
   const { session, loading } = useAuth();
   const segments = useSegments() as string[];
   const router = useRouter();
+  const pathname = usePathname();
+  const { state: workoutState } = useActiveWorkout();
+  const { theme: c, mode } = useTheme();
   const moreSheetRef = useRef<BottomSheetModal>(null);
+  const appearanceSheetRef = useRef<BottomSheetModal>(null);
   const openMore = useCallback(() => {
     moreSheetRef.current?.present();
+  }, []);
+  const openAppearance = useCallback(() => {
+    appearanceSheetRef.current?.present();
   }, []);
 
   const current = segments[0] ?? '';
   const onAuthRoute = (AUTH_ROUTES as readonly string[]).includes(current);
+  const onFocusedRoute = (FOCUSED_ROUTES as readonly string[]).includes(current);
 
   useEffect(() => {
     if (loading) return;
@@ -37,8 +52,8 @@ function AuthGate() {
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color={Colors.accentLight} />
+      <View style={[styles.loading, { backgroundColor: c.background }]}>
+        <ActivityIndicator color={c.accentLight} />
       </View>
     );
   }
@@ -46,25 +61,38 @@ function AuthGate() {
   // The MacroVault brand bar is persistent chrome on every authenticated
   // screen. It owns the top safe-area inset so individual screens don't
   // apply their own ['top'] edge.
-  const showChrome = !!session && !onAuthRoute;
+  const showChrome = !!session && !onAuthRoute && !onFocusedRoute;
+  const workoutInProgress = workoutState.exercises.length > 0;
+  const showBanner =
+    showChrome &&
+    workoutInProgress &&
+    pathname !== '/active-workout' &&
+    pathname !== '/exercise-picker' &&
+    pathname !== '/log-workout';
 
   return (
-    <View style={styles.root}>
+    <View style={[styles.root, { backgroundColor: c.background }]}>
+      <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
       {showChrome ? (
-        <SafeAreaView edges={['top']} style={styles.headerSafeArea}>
-          <HomeHeader />
+        <SafeAreaView
+          edges={['top']}
+          style={{ backgroundColor: c.background }}
+        >
+          <HomeHeader onOpenAppearance={openAppearance} />
         </SafeAreaView>
       ) : null}
+      {showBanner ? <ActiveWorkoutBanner /> : null}
       <View style={styles.stackWrap}>
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: Colors.background },
+            contentStyle: { backgroundColor: c.background },
           }}
         />
       </View>
       {showChrome ? <BottomTabBar onOpenMore={openMore} /> : null}
       {showChrome ? <MoreSheet ref={moreSheetRef} /> : null}
+      {showChrome ? <AppearanceSheet ref={appearanceSheetRef} /> : null}
     </View>
   );
 }
@@ -74,8 +102,11 @@ export default function RootLayout() {
     <GestureHandlerRootView style={styles.root}>
       <BottomSheetModalProvider>
         <AuthProvider>
-          <AuthGate />
-          <StatusBar style="light" />
+          <ThemeProvider>
+            <ActiveWorkoutProvider>
+              <AuthGate />
+            </ActiveWorkoutProvider>
+          </ThemeProvider>
         </AuthProvider>
       </BottomSheetModalProvider>
     </GestureHandlerRootView>
@@ -85,17 +116,12 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.background,
-  },
-  headerSafeArea: {
-    backgroundColor: Colors.background,
   },
   stackWrap: {
     flex: 1,
   },
   loading: {
     flex: 1,
-    backgroundColor: Colors.background,
     alignItems: 'center',
     justifyContent: 'center',
   },

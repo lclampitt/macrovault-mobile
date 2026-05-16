@@ -2,10 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 
-export default function QuickStartCard() {
+export default function QuickStartCard({ onPress }: { onPress: () => void }) {
   return (
     <Pressable
-      onPress={() => console.log('Quick Start tapped — Phase 7b')}
+      onPress={onPress}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel="Quick Start, start an empty workout"
