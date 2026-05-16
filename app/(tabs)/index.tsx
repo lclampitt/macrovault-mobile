@@ -1,5 +1,5 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 import GreetingCard from '../../components/home/GreetingCard';
 import StatCardRow from '../../components/home/StatCardRow';
 import QuickActions from '../../components/home/QuickActions';
@@ -12,6 +12,7 @@ import { fmtClock, getNextMealLabel, getPeriodLabel } from '../../lib/date';
 const WEIGHT_UNIT = 'lb';
 
 export default function HomeScreen() {
+  const { theme: c } = useTheme();
   const goals = useUserGoals();
   const macros = useTodayMacros();
   const workouts = useThisWeekWorkouts();
@@ -35,7 +36,7 @@ export default function HomeScreen() {
   const workoutSubtitle = 'pick a template';
 
   return (
-    <View style={styles.safeArea}>
+    <View style={[styles.safeArea, { backgroundColor: c.background }]}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -74,7 +75,6 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   scrollContent: {
     paddingHorizontal: 16,

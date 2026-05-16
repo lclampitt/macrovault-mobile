@@ -1,5 +1,5 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
-import { Colors } from '../../../constants/Colors';
+import { View, type ViewStyle } from 'react-native';
+import { useTheme } from '../../../lib/theme-context';
 
 type Props = {
   width?: number | `${number}%`;
@@ -14,19 +14,18 @@ export default function SkeletonBar({
   radius = 6,
   style,
 }: Props) {
+  const { theme: c } = useTheme();
   return (
     <View
       style={[
-        styles.bar,
-        { width: width as ViewStyle['width'], height, borderRadius: radius },
+        {
+          backgroundColor: c.surfaceMuted,
+          width: width as ViewStyle['width'],
+          height,
+          borderRadius: radius,
+        },
         style,
       ]}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  bar: {
-    backgroundColor: Colors.surfaceMuted,
-  },
-});

@@ -24,13 +24,14 @@ function elapsedLabel(startedAt: number): string {
 export default function ActiveWorkoutBanner() {
   const router = useRouter();
   const { state } = useActiveWorkout();
+  const { theme: c } = useTheme();
 
   const count = state.exercises.length;
   const title = state.name.trim() || 'Workout';
 
   return (
     <Pressable
-      style={styles.banner}
+      style={[styles.banner, { backgroundColor: c.accent }]}
       onPress={() => router.push('/active-workout')}
       accessibilityRole="button"
       accessibilityLabel="Continue workout in progress"
@@ -60,7 +61,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: Colors.accent,
     paddingHorizontal: 16,
     paddingVertical: 12,
   },

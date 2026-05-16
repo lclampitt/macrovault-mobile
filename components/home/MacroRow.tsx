@@ -1,5 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 
 type Props = {
   label: string;
@@ -10,6 +10,7 @@ type Props = {
 };
 
 export default function MacroRow({ label, current, goal, unit, color }: Props) {
+  const { theme: c } = useTheme();
   const isEmpty = current === 0;
   const pct = goal > 0 ? Math.min(100, (current / goal) * 100) : 0;
 
@@ -17,18 +18,20 @@ export default function MacroRow({ label, current, goal, unit, color }: Props) {
     <View style={styles.row}>
       <View style={styles.head}>
         <View style={styles.labelGroup}>
-          <View style={[styles.dot, { backgroundColor: color }, isEmpty && styles.dotEmpty]} />
-          <Text style={styles.label}>{label}</Text>
+          <View
+            style={[styles.dot, { backgroundColor: color }, isEmpty && styles.dotEmpty]}
+          />
+          <Text style={[styles.label, { color: c.textPrimary }]}>{label}</Text>
         </View>
-        <Text style={styles.values}>
+        <Text style={[styles.values, { color: c.textSecondary }]}>
           {current}
-          <Text style={styles.target}>
+          <Text style={{ color: c.textHint }}>
             /{goal}
             {unit}
           </Text>
         </Text>
       </View>
-      <View style={styles.track}>
+      <View style={[styles.track, { backgroundColor: c.trackMuted }]}>
         <View style={[styles.fill, { backgroundColor: color, width: `${pct}%` }]} />
       </View>
     </View>
@@ -36,9 +39,7 @@ export default function MacroRow({ label, current, goal, unit, color }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: {
-    gap: 4,
-  },
+  row: { gap: 4 },
   head: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -58,21 +59,15 @@ const styles = StyleSheet.create({
     opacity: 0.4,
   },
   label: {
-    color: Colors.textPrimary,
     fontSize: 12,
   },
   values: {
-    color: Colors.textSecondary,
     fontSize: 11,
     fontVariant: ['tabular-nums'],
-  },
-  target: {
-    color: Colors.textHint,
   },
   track: {
     height: 4,
     borderRadius: 999,
-    backgroundColor: Colors.trackMuted,
     overflow: 'hidden',
   },
   fill: {

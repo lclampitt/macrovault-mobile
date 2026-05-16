@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
+import type { Theme } from '../../lib/theme';
 import WeightSparkline from './WeightSparkline';
 import StatCardSkeleton from './skeletons/StatCardSkeleton';
 
@@ -20,6 +22,9 @@ export default function WeightCard({
   loading,
   error,
 }: Props) {
+  const { theme: c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   if (loading) return <StatCardSkeleton />;
 
   return (
@@ -53,47 +58,49 @@ export default function WeightCard({
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  label: {
-    color: Colors.textHint,
-    fontSize: 9,
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  value: {
-    color: Colors.textPrimary,
-    fontSize: 19,
-    fontWeight: '500',
-    letterSpacing: -0.4,
-    lineHeight: 21,
-    fontVariant: ['tabular-nums'],
-  },
-  valueSub: {
-    color: Colors.textHint,
-    fontSize: 10,
-    fontWeight: '400',
-  },
-  caption: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-  },
-  errorText: {
-    color: Colors.error,
-    fontSize: 10,
-    marginTop: 2,
-  },
-  spark: {
-    marginTop: 8,
-  },
-});
+function makeStyles(c: Theme) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderColor: c.border,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+    },
+    label: {
+      color: c.textHint,
+      fontSize: 9,
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginBottom: 4,
+    },
+    value: {
+      color: c.textPrimary,
+      fontSize: 19,
+      fontWeight: '500',
+      letterSpacing: -0.4,
+      lineHeight: 21,
+      fontVariant: ['tabular-nums'],
+    },
+    valueSub: {
+      color: c.textHint,
+      fontSize: 10,
+      fontWeight: '400',
+    },
+    caption: {
+      color: c.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    errorText: {
+      color: c.error,
+      fontSize: 10,
+      marginTop: 2,
+    },
+    spark: {
+      marginTop: 8,
+    },
+  });
+}

@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
+import type { Theme } from '../../lib/theme';
 
 type Props = {
   kicker: string;
@@ -10,7 +12,15 @@ type Props = {
   onPress?: () => void;
 };
 
-export default function QuickActionHero({ kicker, title, subtitle, onPress }: Props) {
+export default function QuickActionHero({
+  kicker,
+  title,
+  subtitle,
+  onPress,
+}: Props) {
+  const { theme: c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   return (
     <Pressable
       onPress={onPress}
@@ -19,7 +29,7 @@ export default function QuickActionHero({ kicker, title, subtitle, onPress }: Pr
       accessibilityLabel={`${title}, ${subtitle}`}
     >
       <LinearGradient
-        colors={['rgba(29, 158, 117, 0.16)', 'rgba(29, 158, 117, 0.00)']}
+        colors={[c.accentSoft, c.accentSofter]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.gradient}
@@ -31,7 +41,7 @@ export default function QuickActionHero({ kicker, title, subtitle, onPress }: Pr
           <MaterialCommunityIcons
             name="silverware-fork-knife"
             size={20}
-            color={Colors.accentLight}
+            color={c.accentLight}
           />
         </View>
         <View style={styles.text}>
@@ -39,75 +49,77 @@ export default function QuickActionHero({ kicker, title, subtitle, onPress }: Pr
           <Text style={styles.title}>{title}</Text>
           <Text style={styles.sub}>{subtitle}</Text>
         </View>
-        <Feather name="arrow-right" size={18} color={Colors.accentLight} />
+        <Feather name="arrow-right" size={18} color={c.accentLight} />
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    width: '100%',
-    backgroundColor: Colors.surface,
-    borderColor: Colors.borderAccentSoft,
-    borderWidth: 1,
-    borderRadius: 14,
-    overflow: 'hidden',
-    position: 'relative',
-  },
-  cardPressed: {
-    borderColor: Colors.borderAccent,
-  },
-  gradient: {
-    ...StyleSheet.absoluteFillObject,
-  },
-  glow: {
-    position: 'absolute',
-    top: -20,
-    right: -20,
-    width: 180,
-    height: 100,
-    borderRadius: 999,
-    backgroundColor: 'rgba(29, 158, 117, 0.10)',
-    opacity: 0.7,
-  },
-  body: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 16,
-    paddingHorizontal: 18,
-  },
-  iconWrap: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    backgroundColor: Colors.accentSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  text: {
-    flex: 1,
-    minWidth: 0,
-  },
-  kicker: {
-    color: Colors.accentLight,
-    fontSize: 9,
-    letterSpacing: 0.9,
-    textTransform: 'uppercase',
-    marginBottom: 2,
-    fontWeight: '600',
-  },
-  title: {
-    color: Colors.textPrimary,
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-    lineHeight: 20,
-  },
-  sub: {
-    color: Colors.textMuted,
-    fontSize: 11,
-    marginTop: 2,
-  },
-});
+function makeStyles(c: Theme) {
+  return StyleSheet.create({
+    card: {
+      width: '100%',
+      backgroundColor: c.surface,
+      borderColor: c.borderAccentSoft,
+      borderWidth: 1,
+      borderRadius: 14,
+      overflow: 'hidden',
+      position: 'relative',
+    },
+    cardPressed: {
+      borderColor: c.borderAccent,
+    },
+    gradient: {
+      ...StyleSheet.absoluteFillObject,
+    },
+    glow: {
+      position: 'absolute',
+      top: -20,
+      right: -20,
+      width: 180,
+      height: 100,
+      borderRadius: 999,
+      backgroundColor: c.accentSofter,
+      opacity: 0.7,
+    },
+    body: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 14,
+      paddingVertical: 16,
+      paddingHorizontal: 18,
+    },
+    iconWrap: {
+      width: 42,
+      height: 42,
+      borderRadius: 10,
+      backgroundColor: c.accentSoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    text: {
+      flex: 1,
+      minWidth: 0,
+    },
+    kicker: {
+      color: c.accentLight,
+      fontSize: 9,
+      letterSpacing: 0.9,
+      textTransform: 'uppercase',
+      marginBottom: 2,
+      fontWeight: '600',
+    },
+    title: {
+      color: c.textPrimary,
+      fontSize: 17,
+      fontWeight: '600',
+      letterSpacing: -0.2,
+      lineHeight: 20,
+    },
+    sub: {
+      color: c.textMuted,
+      fontSize: 11,
+      marginTop: 2,
+    },
+  });
+}

@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 
 type Props = {
   consumed: number;
@@ -13,6 +13,7 @@ const RADIUS = 42;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
 export default function CaloriesRing({ consumed, goal, size = 76 }: Props) {
+  const { theme: c } = useTheme();
   const ratio = goal > 0 ? Math.min(1, consumed / goal) : 0;
   const dashoffset = CIRCUMFERENCE - CIRCUMFERENCE * ratio;
   const showFill = consumed > 0 && goal > 0;
@@ -23,14 +24,13 @@ export default function CaloriesRing({ consumed, goal, size = 76 }: Props) {
         width={size}
         height={size}
         viewBox="0 0 100 100"
-        // Rotate -90deg so the arc starts at the top.
         style={{ transform: [{ rotate: '-90deg' }] }}
       >
         <Circle
           cx={50}
           cy={50}
           r={RADIUS}
-          stroke={Colors.border}
+          stroke={c.border}
           strokeWidth={7}
           fill="none"
         />
@@ -39,7 +39,7 @@ export default function CaloriesRing({ consumed, goal, size = 76 }: Props) {
             cx={50}
             cy={50}
             r={RADIUS}
-            stroke={Colors.accentLight}
+            stroke={c.accentLight}
             strokeWidth={7}
             fill="none"
             strokeLinecap="round"

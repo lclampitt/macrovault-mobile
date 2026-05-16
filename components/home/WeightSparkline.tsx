@@ -1,5 +1,5 @@
 import Svg, { Polyline } from 'react-native-svg';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 
 type Props = {
   history: number[];
@@ -11,6 +11,7 @@ const VIEWBOX_W = 120;
 const VIEWBOX_H = 16;
 
 export default function WeightSparkline({ history, width, height = 16 }: Props) {
+  const { theme: c } = useTheme();
   if (history.length < 2) return null;
 
   const min = Math.min(...history);
@@ -36,7 +37,7 @@ export default function WeightSparkline({ history, width, height = 16 }: Props) 
       <Polyline
         points={points}
         fill="none"
-        stroke={Colors.accentLight}
+        stroke={c.accentLight}
         strokeWidth={1.3}
         strokeLinecap="round"
         strokeLinejoin="round"

@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
+import type { Theme } from '../../lib/theme';
 
 type Props = {
   icon: React.ReactNode;
@@ -8,7 +10,15 @@ type Props = {
   onPress?: () => void;
 };
 
-export default function QuickActionCard({ icon, title, subtitle, onPress }: Props) {
+export default function QuickActionCard({
+  icon,
+  title,
+  subtitle,
+  onPress,
+}: Props) {
+  const { theme: c } = useTheme();
+  const styles = useMemo(() => makeStyles(c), [c]);
+
   return (
     <Pressable
       onPress={onPress}
@@ -25,38 +35,40 @@ export default function QuickActionCard({ icon, title, subtitle, onPress }: Prop
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    flex: 1,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardPressed: {
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  iconWrap: {
-    width: 34,
-    height: 34,
-    borderRadius: 9,
-    backgroundColor: 'rgba(255, 255, 255, 0.04)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
-  },
-  title: {
-    color: Colors.textPrimary,
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  sub: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    marginTop: 2,
-  },
-});
+function makeStyles(c: Theme) {
+  return StyleSheet.create({
+    card: {
+      flex: 1,
+      backgroundColor: c.surface,
+      borderColor: c.border,
+      borderWidth: 1,
+      borderRadius: 12,
+      paddingVertical: 14,
+      paddingHorizontal: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    cardPressed: {
+      borderColor: c.borderSubtle,
+    },
+    iconWrap: {
+      width: 34,
+      height: 34,
+      borderRadius: 9,
+      backgroundColor: c.trackMuted,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: 8,
+    },
+    title: {
+      color: c.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    sub: {
+      color: c.textMuted,
+      fontSize: 10,
+      marginTop: 2,
+    },
+  });
+}

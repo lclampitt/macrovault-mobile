@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { useTheme } from '../../lib/theme-context';
 import QuickActionHero from './QuickActionHero';
 import QuickActionCard from './QuickActionCard';
 import QuickActionSkeleton from './skeletons/QuickActionSkeleton';
@@ -22,9 +22,10 @@ export default function QuickActions({
   weightSubtitle,
   loading,
 }: Props) {
+  const { theme: c } = useTheme();
   return (
     <View style={styles.wrapper}>
-      <Text style={styles.heading}>QUICK ACTIONS</Text>
+      <Text style={[styles.heading, { color: c.textHint }]}>QUICK ACTIONS</Text>
 
       <View style={styles.heroWrap}>
         {loading ? (
@@ -52,7 +53,7 @@ export default function QuickActions({
                 <MaterialCommunityIcons
                   name="dumbbell"
                   size={17}
-                  color={Colors.textSecondary}
+                  color={c.textSecondary}
                 />
               }
               title="Workout"
@@ -64,7 +65,7 @@ export default function QuickActions({
                 <MaterialCommunityIcons
                   name="scale-bathroom"
                   size={17}
-                  color={Colors.textSecondary}
+                  color={c.textSecondary}
                 />
               }
               title="Weight"
@@ -83,7 +84,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   heading: {
-    color: Colors.textHint,
     fontSize: 10,
     letterSpacing: 1,
     textTransform: 'uppercase',
