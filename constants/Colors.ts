@@ -23,4 +23,32 @@ export const Colors = {
   errorBg: 'rgba(239, 68, 68, 0.08)',
   errorBorder: 'rgba(239, 68, 68, 0.2)',
   overlay: 'rgba(0, 0, 0, 0.6)',
+
+  // Activity calendar (ported from gainlytics-v2 theme.css dark tokens)
+  activityWorkout: '#A78BFA',
+  activityMeals: '#5DCAA5',
+  activityBoth: '#FCA130',
+  activityEmpty: 'rgba(255, 255, 255, 0.06)',
+  activityWorkoutBg: 'rgba(167, 139, 250, 0.18)',
+  activityWorkoutBorder: 'rgba(167, 139, 250, 0.35)',
+  activityWorkoutTint: 'rgba(167, 139, 250, 0.4)',
+  activityMealsBg: 'rgba(93, 202, 165, 0.18)',
+  activityMealsBorder: 'rgba(93, 202, 165, 0.35)',
+  activityMealsTint: 'rgba(93, 202, 165, 0.4)',
+  activityBothBg: 'rgba(252, 161, 48, 0.18)',
+  activityBothBorder: 'rgba(252, 161, 48, 0.35)',
+  activityBothTint: 'rgba(252, 161, 48, 0.4)',
+  activityTodayBorder: 'rgba(252, 161, 48, 0.7)',
+  monthCellBg: 'rgba(255, 255, 255, 0.03)',
+
+  // Progress / body-composition chart
+  chartGrid: 'rgba(255, 255, 255, 0.06)',
+  chartAxisLabel: '#6B7280',
+  chartWeightLine: '#1D9E75',
+  chartBodyFatLine: '#5DCAA5',
+
+  // Log Workout landing
+  favoriteStar: '#FCA130',
+  cardioIcon: '#A78BFA',
+  cardioIconBg: 'rgba(167, 139, 250, 0.15)',
 };

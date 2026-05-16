@@ -25,7 +25,7 @@ export default function SettingsScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={styles.header}>
         <Pressable
           onPress={handleBack}
@@ -112,7 +112,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 16,
     paddingTop: 8,
-    paddingBottom: 32,
+    paddingBottom: 120, // clearance for the floating bottom navbar
     gap: 20,
   },
   signOutWrap: {

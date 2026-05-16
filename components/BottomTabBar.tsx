@@ -1,25 +1,25 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import { usePathname, useRouter, type Href } from 'expo-router';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
 
 type IconRender = (color: string, size: number) => React.ReactNode;
 
 type TabDef = {
-  routeName: string;
+  href: Href;
   label: string;
   icon: IconRender;
 };
 
 const LEFT_TABS: TabDef[] = [
   {
-    routeName: 'index',
+    href: '/',
     label: 'Home',
     icon: (color, size) => <Feather name="home" color={color} size={size} />,
   },
   {
-    routeName: 'meals',
+    href: '/meals',
     label: 'Meals',
     icon: (color, size) => (
       <MaterialCommunityIcons name="silverware-fork-knife" color={color} size={size} />
@@ -29,54 +29,37 @@ const LEFT_TABS: TabDef[] = [
 
 const RIGHT_TABS: TabDef[] = [
   {
-    routeName: 'progress',
+    href: '/progress',
     label: 'Progress',
     icon: (color, size) => <Feather name="trending-up" color={color} size={size} />,
   },
 ];
 
-const FAB_ROUTE = 'log-workout';
-const MORE_ROUTE = 'more';
+const FAB_HREF: Href = '/log-workout';
 
-type Props = BottomTabBarProps & {
+type Props = {
   onOpenMore: () => void;
 };
 
-export function BottomTabBar({ state, navigation, onOpenMore }: Props) {
+export function BottomTabBar({ onOpenMore }: Props) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  const findRouteIndex = (name: string) =>
-    state.routes.findIndex((r) => r.name === name);
+  const isActive = (href: Href) => pathname === href;
 
-  const handlePress = (routeName: string) => {
-    const routeIndex = findRouteIndex(routeName);
-    if (routeIndex === -1) return;
-    const route = state.routes[routeIndex];
-
-    const event = navigation.emit({
-      type: 'tabPress',
-      target: route.key,
-      canPreventDefault: true,
-    });
-
-    const isFocused = state.index === routeIndex;
-    if (!isFocused && !event.defaultPrevented) {
-      navigation.navigate(route.name);
-    }
-  };
-
-  const isActive = (routeName: string) => {
-    const idx = findRouteIndex(routeName);
-    return idx !== -1 && state.index === idx;
+  const go = (href: Href) => {
+    if (pathname === href) return;
+    router.navigate(href);
   };
 
   const renderTab = (tab: TabDef) => {
-    const active = isActive(tab.routeName);
+    const active = isActive(tab.href);
     const color = active ? Colors.accentLight : Colors.textSecondary;
     return (
       <Pressable
-        key={tab.routeName}
-        onPress={() => handlePress(tab.routeName)}
+        key={tab.label}
+        onPress={() => go(tab.href)}
         style={[styles.tab, active && styles.tabActive]}
         accessibilityRole="button"
         accessibilityState={{ selected: active }}
@@ -94,7 +77,7 @@ export function BottomTabBar({ state, navigation, onOpenMore }: Props) {
     );
   };
 
-  const fabActive = isActive(FAB_ROUTE);
+  const fabActive = isActive(FAB_HREF);
 
   return (
     <View style={[styles.wrapper, { bottom: Math.max(insets.bottom, 14) }]}>
@@ -102,7 +85,7 @@ export function BottomTabBar({ state, navigation, onOpenMore }: Props) {
         {LEFT_TABS.map(renderTab)}
 
         <Pressable
-          onPress={() => handlePress(FAB_ROUTE)}
+          onPress={() => go(FAB_HREF)}
           style={styles.fab}
           accessibilityRole="button"
           accessibilityLabel="Log workout"

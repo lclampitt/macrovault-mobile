@@ -1,7 +1,5 @@
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
-import HomeHeader from '../../components/home/HomeHeader';
 import GreetingCard from '../../components/home/GreetingCard';
 import StatCardRow from '../../components/home/StatCardRow';
 import QuickActions from '../../components/home/QuickActions';
@@ -37,8 +35,7 @@ export default function HomeScreen() {
   const workoutSubtitle = 'pick a template';
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top']}>
-      <HomeHeader />
+    <View style={styles.safeArea}>
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -70,7 +67,7 @@ export default function HomeScreen() {
           loading={quickLoading}
         />
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

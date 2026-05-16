@@ -1,28 +1,17 @@
-import { useCallback, useRef } from 'react';
 import { Tabs } from 'expo-router';
-import type { BottomSheetModal } from '@gorhom/bottom-sheet';
-import { BottomTabBar } from '../../components/BottomTabBar';
-import { MoreSheet } from '../../components/MoreSheet';
 
+// The visible bottom navbar + More sheet are rendered globally in
+// app/_layout.tsx so they persist across pushed routes (Settings, Activity,
+// etc.). This Tabs navigator only owns routing for the five tab screens;
+// its built-in tab bar is suppressed.
 export default function TabsLayout() {
-  const moreSheetRef = useRef<BottomSheetModal>(null);
-  const openMore = useCallback(() => {
-    moreSheetRef.current?.present();
-  }, []);
-
   return (
-    <>
-      <Tabs
-        screenOptions={{ headerShown: false }}
-        tabBar={(props) => <BottomTabBar {...props} onOpenMore={openMore} />}
-      >
-        <Tabs.Screen name="index" />
-        <Tabs.Screen name="meals" />
-        <Tabs.Screen name="log-workout" />
-        <Tabs.Screen name="progress" />
-        <Tabs.Screen name="more" />
-      </Tabs>
-      <MoreSheet ref={moreSheetRef} />
-    </>
+    <Tabs screenOptions={{ headerShown: false }} tabBar={() => null}>
+      <Tabs.Screen name="index" />
+      <Tabs.Screen name="meals" />
+      <Tabs.Screen name="log-workout" />
+      <Tabs.Screen name="progress" />
+      <Tabs.Screen name="more" />
+    </Tabs>
   );
 }
