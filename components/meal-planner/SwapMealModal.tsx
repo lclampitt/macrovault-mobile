@@ -16,7 +16,7 @@ import SwapMealTabs, { type SwapTab } from './SwapMealTabs';
 import SwapManualEntryTab from './SwapManualEntryTab';
 import SwapSavedMealsTab from './SwapSavedMealsTab';
 import SwapFoodSearchTab from './SwapFoodSearchTab';
-import SwapAITabStub from './SwapAITabStub';
+import SwapAITab from './SwapAITab';
 
 export type SwapSlot = {
   day_of_week: number;
@@ -24,10 +24,16 @@ export type SwapSlot = {
   dateLabel: string; // "Mon, May 18"
 };
 
+export type SlotAIContext = {
+  remaining: { calories: number; protein: number; carbs: number; fat: number };
+  goal: string; // 'cutting' | 'bulking' | 'maintenance'
+};
+
 type Props = {
   visible: boolean;
   slot: SwapSlot | null;
   saving: boolean;
+  aiContext: SlotAIContext | null;
   onClose: () => void;
   onAdd: (meal: SwapPayload) => void;
 };
@@ -42,6 +48,7 @@ export default function SwapMealModal({
   visible,
   slot,
   saving,
+  aiContext,
   onClose,
   onAdd,
 }: Props) {
@@ -83,12 +90,25 @@ export default function SwapMealModal({
           </View>
 
           <View style={styles.tabsWrap}>
-            <SwapMealTabs active={tab} onChange={setTab} aiDisabled />
+            <SwapMealTabs active={tab} onChange={setTab} />
           </View>
 
           <View style={styles.body}>
             {tab === 'ai' ? (
-              <SwapAITabStub />
+              <SwapAITab
+                mealType={slot.meal_type}
+                remaining={
+                  aiContext?.remaining ?? {
+                    calories: 600,
+                    protein: 35,
+                    carbs: 75,
+                    fat: 20,
+                  }
+                }
+                goal={aiContext?.goal ?? 'maintenance'}
+                saving={saving}
+                onAdd={onAdd}
+              />
             ) : tab === 'saved' ? (
               <SwapSavedMealsTab saving={saving} onAdd={onAdd} />
             ) : tab === 'search' ? (

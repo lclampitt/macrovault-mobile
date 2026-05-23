@@ -16,6 +16,8 @@ import {
 import { useMealPlanMutations } from '../../hooks/useMealPlanMutations';
 import { useSavedMeals } from '../../hooks/useSavedMeals';
 import { useLogDayToMacros } from '../../hooks/useLogDayToMacros';
+import { useMealPlannerAI } from '../../hooks/useMealPlannerAI';
+import { useActiveGoal } from '../../hooks/useActiveGoal';
 import WeekHeader from '../../components/meal-planner/WeekHeader';
 import AISuggestWeekButton from '../../components/meal-planner/AISuggestWeekButton';
 import WeekSummaryBar from '../../components/meal-planner/WeekSummaryBar';
@@ -27,6 +29,7 @@ import DayFooterActions from '../../components/meal-planner/DayFooterActions';
 import MealPlannerSkeleton from '../../components/meal-planner/MealPlannerSkeleton';
 import MealPlannerGate from '../../components/meal-planner/MealPlannerGate';
 import SwapMealModal, {
+  type SlotAIContext,
   type SwapSlot,
 } from '../../components/meal-planner/SwapMealModal';
 import DeleteConfirmModal from '../../components/progress/DeleteConfirmModal';
@@ -56,6 +59,7 @@ export default function MealsScreen() {
 
   const { entries, planId, loading, error, refetch } = useMealPlanWeek(weekStart);
   const { data: goals } = useUserGoals();
+  const { goal: activeGoal } = useActiveGoal();
   const {
     saving,
     deletingId,
@@ -64,10 +68,16 @@ export default function MealsScreen() {
     addOrReplace,
     deleteEntry,
     clearWeek,
+    replaceWeek,
   } = useMealPlanMutations();
   const { favoriteNameMap, toggleFavorite } = useSavedMeals();
   const { loggedDays, busyDay, toggleLogDay, refetch: refetchLog } =
     useLogDayToMacros(weekStart, entries);
+  const {
+    loadingWeek,
+    weekProgress,
+    suggestFullWeek,
+  } = useMealPlannerAI();
 
   // Selected day defaults to today when viewing this week, else Monday.
   const initialDay = useMemo(() => {
@@ -100,6 +110,9 @@ export default function MealsScreen() {
 
   // -------- Confirm-clear modal state --------
   const [confirmClear, setConfirmClear] = useState(false);
+  // -------- Confirm-replace-week (AI suggest week) state --------
+  const [confirmReplaceWeek, setConfirmReplaceWeek] = useState(false);
+  const [aiWeekError, setAiWeekError] = useState<string | null>(null);
 
   const selectedDate = addDays(weekStart, selectedDay);
   const selectedLabel = fmtLongDay(selectedDate);
@@ -131,6 +144,34 @@ export default function MealsScreen() {
   function entryFor(meal: MealType): MealPlanEntry | null {
     return dayEntries.find((e) => e.meal_type === meal) ?? null;
   }
+
+  // -------- AI context for the swap modal's AI Suggest tab --------
+  // "Remaining" = day's macro target minus what's already planned for that
+  // day, excluding the slot being swapped. Falls back to 1/3 of the daily
+  // target if there are no goals yet.
+  const aiContext: SlotAIContext | null = useMemo(() => {
+    if (!swapSlot) return null;
+    const goalCals = goals?.calories ?? 2000;
+    const goalProtein = goals?.protein ?? 150;
+    const goalCarbs = goals?.carbs ?? 250;
+    const goalFat = goals?.fat ?? 65;
+    const otherSlotsForDay = dayEntries.filter(
+      (e) => e.meal_type !== swapSlot.meal_type,
+    );
+    const usedCals = otherSlotsForDay.reduce((s, e) => s + e.calories, 0);
+    const usedProtein = otherSlotsForDay.reduce((s, e) => s + e.protein, 0);
+    const usedCarbs = otherSlotsForDay.reduce((s, e) => s + e.carbs, 0);
+    const usedFat = otherSlotsForDay.reduce((s, e) => s + e.fat, 0);
+    const remaining = {
+      calories: Math.max(50, goalCals - usedCals),
+      protein: Math.max(5, goalProtein - usedProtein),
+      carbs: Math.max(5, goalCarbs - usedCarbs),
+      fat: Math.max(5, goalFat - usedFat),
+    };
+    const goal =
+      activeGoal?.phaseType ?? 'maintenance'; // 'cutting' | 'bulking' | 'maintenance'
+    return { remaining, goal };
+  }, [swapSlot, dayEntries, goals, activeGoal]);
 
   function goPrevWeek() {
     setWeekStart((w) => addDays(w, -7));
@@ -200,6 +241,68 @@ export default function MealsScreen() {
     }
   }
 
+  // -------- AI Suggest Week orchestration --------
+  function handleAISuggestWeekTap() {
+    setAiWeekError(null);
+    if (entries.length > 0) {
+      setConfirmReplaceWeek(true);
+    } else {
+      runAISuggestWeek();
+    }
+  }
+
+  async function runAISuggestWeek() {
+    setConfirmReplaceWeek(false);
+    setAiWeekError(null);
+    const pid = planId ?? (await getOrCreatePlanId(weekStart));
+    if (!pid) {
+      setAiWeekError('Could not create this week’s plan.');
+      return;
+    }
+    const dailyTargets = {
+      calories: goals?.calories ?? 2000,
+      protein: goals?.protein ?? 150,
+      carbs: goals?.carbs ?? 250,
+      fat: goals?.fat ?? 65,
+    };
+    const goal = activeGoal?.phaseType ?? 'maintenance';
+    const result = await suggestFullWeek({
+      goal,
+      dietPreference: 'standard',
+      dailyTargets,
+    });
+    if (!result.entries || result.entries.length === 0) {
+      setAiWeekError(result.error ?? 'AI returned no entries.');
+      return;
+    }
+    const writeRes = await replaceWeek(
+      pid,
+      weekStart,
+      result.entries.map((e) => ({
+        day_of_week: e.day_of_week,
+        meal_type: e.meal_type,
+        meal_name: e.meal_name,
+        ingredients: e.ingredients || null,
+        calories: Math.round(e.calories),
+        protein: Math.round(e.protein * 10) / 10,
+        carbs: Math.round(e.carbs * 10) / 10,
+        fat: Math.round(e.fat * 10) / 10,
+      })),
+    );
+    if (writeRes.error) {
+      setAiWeekError(writeRes.error);
+      return;
+    }
+    if (result.error) {
+      // Partial success — wrote what we got but a later /suggest call failed.
+      setAiWeekError(
+        `Saved ${result.entries.length} meals. ${result.error}`,
+      );
+    }
+    await refetch();
+    await refetchLog();
+  }
+
   if (subLoading) {
     return (
       <SafeAreaView style={styles.safeArea} edges={['bottom']}>
@@ -232,7 +335,16 @@ export default function MealsScreen() {
           onPrevWeek={goPrevWeek}
           onNextWeek={goNextWeek}
         />
-        <AISuggestWeekButton />
+        <AISuggestWeekButton
+          loading={loadingWeek}
+          progress={weekProgress}
+          onPress={handleAISuggestWeekTap}
+        />
+        {aiWeekError ? (
+          <View style={styles.aiErrorCard}>
+            <Text style={styles.aiErrorText}>{aiWeekError}</Text>
+          </View>
+        ) : null}
         <WeekSummaryBar
           weekStart={weekStart}
           loggedKcal={weekLoggedKcal}
@@ -295,6 +407,7 @@ export default function MealsScreen() {
         visible={swapVisible}
         slot={swapSlot}
         saving={saving}
+        aiContext={aiContext}
         onClose={closeSwap}
         onAdd={handleAddMeal}
       />
@@ -307,6 +420,16 @@ export default function MealsScreen() {
         loading={clearing}
         onCancel={() => setConfirmClear(false)}
         onConfirm={handleClearWeek}
+      />
+
+      <DeleteConfirmModal
+        visible={confirmReplaceWeek}
+        title="Replace this week's plan?"
+        message="AI Suggest Week will wipe every meal currently on this week and replace it with a fresh AI-generated plan. This can't be undone."
+        confirmLabel="Generate"
+        loading={loadingWeek}
+        onCancel={() => setConfirmReplaceWeek(false)}
+        onConfirm={runAISuggestWeek}
       />
     </SafeAreaView>
   );
@@ -337,5 +460,18 @@ const styles = StyleSheet.create({
   errorText: {
     color: Colors.error,
     fontSize: 13,
+  },
+  aiErrorCard: {
+    backgroundColor: Colors.errorBg,
+    borderColor: Colors.errorBorder,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+  },
+  aiErrorText: {
+    color: Colors.error,
+    fontSize: 12,
+    lineHeight: 17,
   },
 });

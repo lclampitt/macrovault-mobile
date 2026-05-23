@@ -1,25 +1,43 @@
-import { Alert, Pressable, StyleSheet, Text } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 
-/**
- * Phase 10a stub. Real wiring comes in Phase 10c (Pro+ gate + FastAPI call).
- */
-export default function AISuggestWeekButton() {
+type Props = {
+  loading: boolean;
+  progress: { done: number; total: number };
+  onPress: () => void;
+};
+
+export default function AISuggestWeekButton({
+  loading,
+  progress,
+  onPress,
+}: Props) {
   return (
     <Pressable
-      onPress={() =>
-        Alert.alert(
-          'AI suggest week',
-          'Coming soon — Phase 10c. Will generate a full Mon–Sun plan via Claude.',
-        )
-      }
-      style={({ pressed }) => [styles.btn, pressed && styles.btnPressed]}
+      onPress={onPress}
+      disabled={loading}
+      style={({ pressed }) => [
+        styles.btn,
+        pressed && !loading && styles.btnPressed,
+        loading && styles.btnLoading,
+      ]}
       accessibilityRole="button"
       accessibilityLabel="AI suggest week"
     >
-      <Feather name="zap" size={13} color="#fff" />
-      <Text style={styles.text}>AI suggest week</Text>
+      {loading ? (
+        <>
+          <ActivityIndicator size="small" color="#fff" />
+          <Text style={styles.text}>
+            Generating… {progress.done}/{progress.total}
+          </Text>
+        </>
+      ) : (
+        <>
+          <Feather name="zap" size={13} color="#fff" />
+          <Text style={styles.text}>AI suggest week</Text>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -36,6 +54,9 @@ const styles = StyleSheet.create({
   },
   btnPressed: {
     opacity: 0.9,
+  },
+  btnLoading: {
+    opacity: 0.85,
   },
   text: {
     color: '#fff',

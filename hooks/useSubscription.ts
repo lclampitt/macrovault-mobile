@@ -10,6 +10,7 @@ export type Plan = 'free' | 'pro' | 'pro_plus';
 type State = {
   plan: Plan;
   isPro: boolean; // pro OR pro_plus
+  isProPlus: boolean; // pro_plus only (AI features)
   workoutCount: number;
   atFreeLimit: boolean; // free tier AND workoutCount >= limit
   loading: boolean;
@@ -77,11 +78,13 @@ export function useSubscription(): State {
   );
 
   const isPro = plan === 'pro' || plan === 'pro_plus';
+  const isProPlus = plan === 'pro_plus';
   const atFreeLimit = !isPro && workoutCount >= FREE_WORKOUT_LIMIT;
 
   return {
     plan,
     isPro,
+    isProPlus,
     workoutCount,
     atFreeLimit,
     loading,

@@ -38,6 +38,21 @@ type State = {
   deleteEntry: (entry: MealPlanEntry, weekStart: Date) => Promise<Result>;
   /** Wipe every entry for this plan + any planner-originated food_logs that week. */
   clearWeek: (planId: string, weekStart: Date) => Promise<Result>;
+  /** Replace the entire week's plan in one go (used by AI suggest week). */
+  replaceWeek: (
+    planId: string,
+    weekStart: Date,
+    entries: Array<{
+      day_of_week: number;
+      meal_type: MealType;
+      meal_name: string;
+      ingredients: string | null;
+      calories: number;
+      protein: number;
+      carbs: number;
+      fat: number;
+    }>,
+  ) => Promise<Result>;
 };
 
 export function useMealPlanMutations(): State {
@@ -199,6 +214,70 @@ export function useMealPlanMutations(): State {
     [user],
   );
 
+  const replaceWeek = useCallback(
+    async (
+      planId: string,
+      weekStart: Date,
+      newEntries: Array<{
+        day_of_week: number;
+        meal_type: MealType;
+        meal_name: string;
+        ingredients: string | null;
+        calories: number;
+        protein: number;
+        carbs: number;
+        fat: number;
+      }>,
+    ): Promise<Result> => {
+      if (!user) return { error: 'Not authenticated' };
+      setClearing(true);
+      try {
+        // Wipe existing entries for this plan + any planner-tagged food_logs
+        // for the week so the new plan starts fresh.
+        const { error: delErr } = await supabase
+          .from('meal_plan_entries')
+          .delete()
+          .eq('plan_id', planId);
+        if (delErr) throw delErr;
+        const dates = Array.from({ length: 7 }, (_, i) =>
+          fmtLocalDate(addDays(weekStart, i)),
+        );
+        await supabase
+          .from('food_logs')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('notes', 'From meal planner')
+          .in('logged_date', dates);
+        // Bulk insert the new rows.
+        if (newEntries.length > 0) {
+          const rows = newEntries.map((e) => ({
+            plan_id: planId,
+            day_of_week: e.day_of_week,
+            meal_type: e.meal_type,
+            meal_name: e.meal_name,
+            ingredients: e.ingredients,
+            calories: e.calories,
+            protein: e.protein,
+            carbs: e.carbs,
+            fat: e.fat,
+          }));
+          const { error: insErr } = await supabase
+            .from('meal_plan_entries')
+            .insert(rows);
+          if (insErr) throw insErr;
+        }
+        return { error: null };
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to replace week';
+        console.error('[useMealPlanMutations.replaceWeek]', message);
+        return { error: message };
+      } finally {
+        setClearing(false);
+      }
+    },
+    [user],
+  );
+
   return {
     saving,
     deletingId,
@@ -207,5 +286,6 @@ export function useMealPlanMutations(): State {
     addOrReplace,
     deleteEntry,
     clearWeek,
+    replaceWeek,
   };
 }
