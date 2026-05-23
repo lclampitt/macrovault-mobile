@@ -1,4 +1,5 @@
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
@@ -8,18 +9,23 @@ import ActiveGoalCard from '../components/goal-planner/ActiveGoalCard';
 import GoalTimelineCard from '../components/goal-planner/GoalTimelineCard';
 import MacroTargetsCard from '../components/goal-planner/MacroTargetsCard';
 import LogNutritionCard from '../components/goal-planner/LogNutritionCard';
+import GoalEditorModal from '../components/goal-planner/GoalEditorModal';
 import { GoalCardsSkeleton } from '../components/goal-planner/GoalPlannerSkeletons';
-
-function comingSoonPhase9c() {
-  Alert.alert(
-    'Edit goal',
-    'Coming soon — Phase 9c. The goal editor will arrive in a future update.',
-  );
-}
 
 export default function GoalPlannerScreen() {
   const router = useRouter();
-  const { goal, loading, error } = useActiveGoal();
+  const { goal, loading, error, refetch } = useActiveGoal();
+  const [editorOpen, setEditorOpen] = useState(false);
+
+  function openEditor() {
+    setEditorOpen(true);
+  }
+  function closeEditor() {
+    setEditorOpen(false);
+  }
+  async function handleSaved() {
+    await refetch();
+  }
 
   function handleBack() {
     if (router.canGoBack()) router.back();
@@ -57,7 +63,7 @@ export default function GoalPlannerScreen() {
           </View>
         ) : goal ? (
           <View style={styles.stack}>
-            <ActiveGoalCard goal={goal} onEditGoal={comingSoonPhase9c} />
+            <ActiveGoalCard goal={goal} onEditGoal={openEditor} />
             {goal.hasTimeframe ? <GoalTimelineCard goal={goal} /> : null}
             <MacroTargetsCard goal={goal} />
           </View>
@@ -70,7 +76,7 @@ export default function GoalPlannerScreen() {
             </Text>
             <Pressable
               style={styles.emptyBtn}
-              onPress={comingSoonPhase9c}
+              onPress={openEditor}
               accessibilityRole="button"
             >
               <Text style={styles.emptyBtnText}>Set up a goal</Text>
@@ -84,6 +90,13 @@ export default function GoalPlannerScreen() {
           <LogNutritionCard />
         </View>
       </ScrollView>
+
+      <GoalEditorModal
+        visible={editorOpen}
+        initial={goal}
+        onClose={closeEditor}
+        onSaved={handleSaved}
+      />
     </SafeAreaView>
   );
 }
