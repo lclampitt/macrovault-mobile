@@ -9,7 +9,18 @@ export type Exercise = {
   equipment: string;
   difficulty: string;
   instructions: string[];
+  formCues?: string[];
+  commonMistakes?: string[];
+  setsRepsGuidance?: {
+    cutting?: string;
+    bulking?: string;
+    maintenance?: string;
+  };
 };
+
+export function findExerciseById(id: string): Exercise | null {
+  return EXERCISES.find((e) => e.id === id) ?? null;
+}
 
 export const EXERCISES = exercisesJson as unknown as Exercise[];
 
