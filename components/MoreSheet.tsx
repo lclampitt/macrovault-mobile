@@ -10,11 +10,12 @@ import { useRouter, type Href } from 'expo-router';
 import {
   BottomSheetBackdrop,
   BottomSheetModal,
-  BottomSheetView,
+  BottomSheetScrollView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../constants/Colors';
+import { useSubscription } from '../hooks/useSubscription';
 
 type IconRender = (color: string, size: number) => React.ReactNode;
 
@@ -22,63 +23,107 @@ type MoreItem = {
   href: Href;
   label: string;
   icon: IconRender;
-  proBadge?: boolean;
+  pro?: boolean; // requires a subscription
+  tryFree?: boolean; // free users see a "Try free" badge instead of a lock
 };
 
-const PRO_ITEMS: MoreItem[] = [
+type MoreSection = {
+  label: string;
+  items: MoreItem[];
+};
+
+// Grouping mirrors the web sidebar (gainlytics-v2 Sidebar.jsx NAV_GROUPS).
+const SECTIONS: MoreSection[] = [
   {
-    href: '/workouts',
-    label: 'Workouts',
-    icon: (color, size) => (
-      <MaterialCommunityIcons name="dumbbell" color={color} size={size} />
-    ),
-    proBadge: true,
+    label: 'ANALYZE',
+    items: [
+      {
+        href: '/progress',
+        label: 'Progress',
+        icon: (c, s) => <Feather name="trending-up" color={c} size={s} />,
+        pro: true,
+      },
+      {
+        href: '/activity',
+        label: 'Activity',
+        icon: (c, s) => (
+          <MaterialCommunityIcons name="calendar-heart" color={c} size={s} />
+        ),
+      },
+      {
+        href: '/measurements',
+        label: 'Measurements',
+        icon: (c, s) => (
+          <MaterialCommunityIcons name="ruler" color={c} size={s} />
+        ),
+      },
+      {
+        href: '/calculators',
+        label: 'Calculators',
+        icon: (c, s) => (
+          <MaterialCommunityIcons
+            name="calculator-variant"
+            color={c}
+            size={s}
+          />
+        ),
+      },
+    ],
   },
   {
-    href: '/goal-planner',
-    label: 'Goal Planner',
-    icon: (color, size) => <Feather name="target" color={color} size={size} />,
-    proBadge: true,
+    label: 'PLAN',
+    items: [
+      {
+        href: '/meals',
+        label: 'Meal Planner',
+        icon: (c, s) => (
+          <MaterialCommunityIcons
+            name="silverware-fork-knife"
+            color={c}
+            size={s}
+          />
+        ),
+        pro: true,
+      },
+      {
+        href: '/goal-planner',
+        label: 'Goal Planner',
+        icon: (c, s) => <Feather name="target" color={c} size={s} />,
+        pro: true,
+      },
+      {
+        href: '/workouts',
+        label: 'Workouts',
+        icon: (c, s) => (
+          <MaterialCommunityIcons name="dumbbell" color={c} size={s} />
+        ),
+        pro: true,
+        tryFree: true,
+      },
+    ],
+  },
+  {
+    label: 'LIBRARY',
+    items: [
+      {
+        href: '/exercise-library',
+        label: 'Exercise Library',
+        icon: (c, s) => <Feather name="book-open" color={c} size={s} />,
+      },
+    ],
   },
 ];
 
-const GENERAL_ITEMS: MoreItem[] = [
-  {
-    href: '/activity',
-    label: 'Activity',
-    icon: (color, size) => (
-      <MaterialCommunityIcons name="calendar-heart" color={color} size={size} />
-    ),
-  },
-  {
-    href: '/calculators',
-    label: 'Calculators',
-    icon: (color, size) => (
-      <MaterialCommunityIcons name="calculator-variant" color={color} size={size} />
-    ),
-  },
-  {
-    href: '/exercise-library',
-    label: 'Exercise Library',
-    icon: (color, size) => <Feather name="book-open" color={color} size={size} />,
-  },
-  {
-    href: '/measurements',
-    label: 'Measurements',
-    icon: (color, size) => (
-      <MaterialCommunityIcons name="ruler" color={color} size={size} />
-    ),
-  },
-  {
-    href: '/settings',
-    label: 'Settings',
-    icon: (color, size) => <Feather name="settings" color={color} size={size} />,
-  },
-];
+const SETTINGS_ITEM: MoreItem = {
+  href: '/settings',
+  label: 'Settings',
+  icon: (c, s) => <Feather name="settings" color={c} size={s} />,
+};
 
 export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref) {
   const router = useRouter();
-  const snapPoints = useMemo(() => ['70%'], []);
+  const { isPro } = useSubscription();
+  const snapPoints = useMemo(() => ['85%'], []);
 
   const handleDismiss = useCallback(() => {
     if (ref && typeof ref !== 'function') {
@@ -116,7 +161,10 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
       backdropComponent={renderBackdrop}
     >
       <View style={styles.topAccent} pointerEvents="none" />
-      <BottomSheetView style={styles.content}>
+      <BottomSheetScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
           <Text style={styles.headerTitle}>All pages</Text>
           <Pressable
@@ -129,22 +177,43 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
           </Pressable>
         </View>
 
-        <View style={[styles.sectionLabelRow, styles.sectionLabelPro]}>
-          <MaterialCommunityIcons name="crown" size={11} color={Colors.accentLight} />
-          <Text style={styles.sectionLabelProText}>PRO</Text>
-        </View>
-        <View style={styles.grid}>
-          {PRO_ITEMS.map((item) => (
-            <MoreCard key={item.label} item={item} onPress={() => navigate(item.href)} />
-          ))}
-          <View style={styles.cardSlot} />
-        </View>
+        {SECTIONS.map((section) => (
+          <View key={section.label}>
+            <Text style={styles.sectionLabel}>{section.label}</Text>
+            <View style={styles.grid}>
+              {section.items.map((item) => (
+                <MoreCard
+                  key={item.label}
+                  item={item}
+                  isPro={isPro}
+                  onPress={() => navigate(item.href)}
+                />
+              ))}
+            </View>
+          </View>
+        ))}
 
-        <Text style={styles.sectionLabelGeneral}>GENERAL</Text>
-        <View style={styles.grid}>
-          {GENERAL_ITEMS.map((item) => (
-            <MoreCard key={item.label} item={item} onPress={() => navigate(item.href)} />
-          ))}
+        <View style={styles.settingsWrap}>
+          <Pressable
+            onPress={() => navigate(SETTINGS_ITEM.href)}
+            style={({ pressed }) => [
+              styles.settingsRow,
+              pressed && styles.cardPressed,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={SETTINGS_ITEM.label}
+          >
+            <View style={styles.settingsIcon}>
+              {SETTINGS_ITEM.icon(Colors.textSecondary, 18)}
+            </View>
+            <Text style={styles.settingsLabel}>{SETTINGS_ITEM.label}</Text>
+            <Feather
+              name="chevron-right"
+              size={18}
+              color={Colors.textMuted}
+              style={styles.settingsChevron}
+            />
+          </Pressable>
         </View>
 
         <View style={styles.themeRow}>
@@ -157,27 +226,43 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
             style={styles.themePaletteIcon}
           />
         </View>
-      </BottomSheetView>
+      </BottomSheetScrollView>
     </BottomSheetModal>
   );
 });
 
 type MoreCardProps = {
   item: MoreItem;
+  isPro: boolean;
   onPress: (e: GestureResponderEvent) => void;
 };
 
-function MoreCard({ item, onPress }: MoreCardProps) {
+function MoreCard({ item, isPro, onPress }: MoreCardProps) {
+  const locked = !!item.pro && !isPro;
+  const showTryFree = locked && !!item.tryFree;
+
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.cardSlot, styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [
+        styles.cardSlot,
+        styles.card,
+        pressed && styles.cardPressed,
+      ]}
       accessibilityRole="button"
-      accessibilityLabel={item.label}
+      accessibilityLabel={
+        locked
+          ? `${item.label}${showTryFree ? ', try free' : ', Pro feature'}`
+          : item.label
+      }
     >
-      {item.proBadge ? (
-        <View style={styles.proBadge}>
-          <Text style={styles.proBadgeText}>Pro</Text>
+      {showTryFree ? (
+        <View style={styles.tryFreeBadge}>
+          <Text style={styles.tryFreeText}>Try free</Text>
+        </View>
+      ) : locked ? (
+        <View style={styles.lockBadge}>
+          <Feather name="lock" size={11} color={Colors.textMuted} />
         </View>
       ) : null}
       <View style={styles.cardIcon}>{item.icon(Colors.textSecondary, 18)}</View>
@@ -207,9 +292,8 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   content: {
-    flex: 1,
     paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingBottom: 28,
   },
   header: {
     flexDirection: 'row',
@@ -225,29 +309,14 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-  sectionLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 4,
-    paddingTop: 14,
-    paddingBottom: 6,
-  },
-  sectionLabelPro: {},
-  sectionLabelProText: {
-    color: Colors.accentLight,
-    fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-  },
-  sectionLabelGeneral: {
+  sectionLabel: {
     color: Colors.textMuted,
     fontSize: 10,
     fontWeight: '600',
     letterSpacing: 0.6,
     paddingHorizontal: 4,
-    paddingTop: 10,
-    paddingBottom: 6,
+    paddingTop: 16,
+    paddingBottom: 8,
   },
   grid: {
     flexDirection: 'row',
@@ -288,7 +357,18 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     textAlign: 'center',
   },
-  proBadge: {
+  lockBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: Colors.surfaceMuted,
+    borderRadius: 999,
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tryFreeBadge: {
     position: 'absolute',
     top: 6,
     right: 6,
@@ -297,14 +377,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
     paddingVertical: 2,
   },
-  proBadgeText: {
+  tryFreeText: {
     color: Colors.accentLight,
     fontSize: 9,
     fontWeight: '700',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
+  },
+  settingsWrap: {
+    marginTop: 18,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderColor: Colors.border,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+    gap: 12,
+  },
+  settingsIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    backgroundColor: Colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  settingsLabel: {
+    color: Colors.textPrimary,
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  settingsChevron: {
+    marginLeft: 'auto',
   },
   themeRow: {
-    marginTop: 16,
+    marginTop: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
