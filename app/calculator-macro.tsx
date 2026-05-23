@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import {
-  Alert,
   Pressable,
   ScrollView,
   Share,
@@ -28,6 +27,7 @@ import {
   type Sex,
 } from '../lib/calculators';
 import { saveMacroResult } from '../lib/calculatorStorage';
+import DeleteConfirmModal from '../components/progress/DeleteConfirmModal';
 
 function goalTypeForColumn(goal: GoalKey): string {
   if (goal === 'cut') return 'Cutting';
@@ -57,6 +57,8 @@ export default function MacroCalculatorScreen() {
 
   const [results, setResults] = useState<MacroResult | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmVisible, setConfirmVisible] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   function handleBack() {
     if (results) {
@@ -157,55 +159,67 @@ export default function MacroCalculatorScreen() {
   async function doSaveToGoals() {
     if (!user || !results) return;
     setSaving(true);
+    setSaveError(null);
     try {
-      const { error: upErr } = await supabase.from('goals').upsert(
-        {
-          user_id: user.id,
-          goal: goalTypeForColumn(goal),
-          calories: results.targetCals,
-          protein: results.proteinG,
-          carbs: results.carbG,
-          fat: results.fatG,
-        },
-        { onConflict: 'user_id' },
-      );
-      if (upErr) throw upErr;
+      // NOTE: deliberately NOT using upsert({ onConflict }) — that performs an
+      // ON CONFLICT DO UPDATE which fails silently/erratically against the
+      // `goals` table (same class of bug we hit with `profiles`). Do an
+      // explicit update-by-user_id, then insert only if no row existed.
+      const payload = {
+        goal: goalTypeForColumn(goal),
+        calories: results.targetCals,
+        protein: results.proteinG,
+        carbs: results.carbG,
+        fat: results.fatG,
+      };
+      const { data: updated, error: updateError } = await supabase
+        .from('goals')
+        .update(payload)
+        .eq('user_id', user.id)
+        .select('id');
+      if (updateError) throw updateError;
+      if (!updated || updated.length === 0) {
+        const { error: insertError } = await supabase
+          .from('goals')
+          .insert({ user_id: user.id, ...payload });
+        if (insertError) throw insertError;
+      }
       router.push('/goal-planner');
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to save goal.';
-      Alert.alert('Could not save', msg);
+      console.error('[calculator-macro.doSaveToGoals]', msg);
+      // Inline error (works on web + native; Alert.alert is a no-op on
+      // react-native-web, which is why localhost appeared to "do nothing").
+      setSaveError(msg);
     } finally {
       setSaving(false);
     }
   }
 
   async function handleSaveToGoals() {
+    setSaveError(null);
     if (!user) {
-      Alert.alert('Sign in required', 'Please sign in to save your goal.');
+      setSaveError('Please sign in to save your goal.');
       return;
     }
     if (!results) return;
     try {
-      const { data: existing } = await supabase
+      // limit(1) (not maybeSingle) so a duplicate-row state doesn't error out
+      // the whole check and block the save.
+      const { data: existingRows } = await supabase
         .from('goals')
         .select('calories, protein, carbs, fat')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .limit(1);
+      const existing = existingRows?.[0];
       const hasExisting =
-        existing &&
+        !!existing &&
         ((existing.calories ?? 0) > 0 ||
           (existing.protein ?? 0) > 0 ||
           (existing.carbs ?? 0) > 0 ||
           (existing.fat ?? 0) > 0);
       if (hasExisting) {
-        Alert.alert(
-          'Overwrite existing goal?',
-          'You already have a calorie and macro goal set. Saving will replace it with these values.',
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Overwrite', style: 'destructive', onPress: doSaveToGoals },
-          ],
-        );
+        setConfirmVisible(true);
       } else {
         doSaveToGoals();
       }
@@ -311,6 +325,10 @@ export default function MacroCalculatorScreen() {
             <Row label="Fat" value={`${perMeal.f} g`} />
           </View>
 
+          {saveError ? (
+            <Text style={styles.saveError}>{saveError}</Text>
+          ) : null}
+
           <Pressable
             style={[styles.primaryBtn, saving && styles.btnDisabled]}
             onPress={handleSaveToGoals}
@@ -338,6 +356,18 @@ export default function MacroCalculatorScreen() {
             </Pressable>
           </View>
         </ScrollView>
+
+        <DeleteConfirmModal
+          visible={confirmVisible}
+          title="Overwrite existing goal?"
+          message="You already have a calorie and macro goal set. Saving will replace it with these values."
+          confirmLabel="Overwrite"
+          onCancel={() => setConfirmVisible(false)}
+          onConfirm={() => {
+            setConfirmVisible(false);
+            doSaveToGoals();
+          }}
+        />
       </SafeAreaView>
     );
   }
@@ -943,6 +973,13 @@ const styles = StyleSheet.create({
     color: Colors.error,
     fontSize: 13,
     marginTop: 16,
+  },
+  saveError: {
+    color: Colors.error,
+    fontSize: 13,
+    textAlign: 'center',
+    marginTop: 16,
+    marginBottom: -8,
   },
   primaryBtn: {
     backgroundColor: Colors.accent,
