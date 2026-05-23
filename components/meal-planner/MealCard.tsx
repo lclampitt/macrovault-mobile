@@ -1,36 +1,50 @@
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import type { MealPlanEntry } from '../../hooks/useMealPlanWeek';
 
 type Props = {
   entry: MealPlanEntry;
+  isFavorite: boolean;
+  deleting: boolean;
+  onToggleFavorite: () => void;
+  onSwap: () => void;
+  onDelete: () => void;
 };
 
 function fmtMacro(n: number): string {
   return Math.round(n).toString();
 }
 
-export default function MealCard({ entry }: Props) {
+export default function MealCard({
+  entry,
+  isFavorite,
+  deleting,
+  onToggleFavorite,
+  onSwap,
+  onDelete,
+}: Props) {
   const [showIngredients, setShowIngredients] = useState(false);
   return (
     <View style={styles.card}>
       <View style={styles.topRow}>
         <Text style={styles.title}>{entry.meal_name}</Text>
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              'Save meal',
-              'Coming soon — Phase 10b. Will save this meal to your favorites.',
-            )
-          }
+          onPress={onToggleFavorite}
           hitSlop={8}
-          style={styles.heartBtn}
+          style={[styles.heartBtn, isFavorite && styles.heartBtnActive]}
           accessibilityRole="button"
-          accessibilityLabel="Favorite meal"
+          accessibilityState={{ selected: isFavorite }}
+          accessibilityLabel={
+            isFavorite ? 'Remove from saved meals' : 'Save meal'
+          }
         >
-          <Feather name="heart" size={16} color={Colors.textMuted} />
+          <Feather
+            name="heart"
+            size={13}
+            color={isFavorite ? Colors.accentLight : Colors.textMuted}
+          />
         </Pressable>
       </View>
 
@@ -49,7 +63,7 @@ export default function MealCard({ entry }: Props) {
       >
         <Feather
           name={showIngredients ? 'chevron-up' : 'chevron-down'}
-          size={14}
+          size={12}
           color={Colors.textMuted}
         />
         <Text style={styles.ingredientsToggleText}>
@@ -65,31 +79,22 @@ export default function MealCard({ entry }: Props) {
 
       <View style={styles.actionsRow}>
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              'Swap meal',
-              'Coming soon — Phase 10b. Opens the swap modal (AI / saved / search / manual).',
-            )
-          }
+          onPress={onSwap}
           style={styles.swapBtn}
           accessibilityRole="button"
           accessibilityLabel="Swap meal"
         >
-          <Feather name="refresh-cw" size={14} color={Colors.textSecondary} />
+          <Feather name="refresh-cw" size={12} color={Colors.textSecondary} />
           <Text style={styles.swapText}>Swap meal</Text>
         </Pressable>
         <Pressable
-          onPress={() =>
-            Alert.alert(
-              'Remove meal',
-              'Coming soon — Phase 10b. Will remove this meal from your plan.',
-            )
-          }
-          style={styles.removeBtn}
+          onPress={onDelete}
+          disabled={deleting}
+          style={[styles.removeBtn, deleting && styles.removeBtnDisabled]}
           accessibilityRole="button"
           accessibilityLabel="Remove meal"
         >
-          <Feather name="x" size={16} color={Colors.error} />
+          <Feather name="x" size={14} color={Colors.error} />
         </Pressable>
       </View>
     </View>
@@ -109,71 +114,75 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
     borderWidth: 1,
-    borderRadius: 14,
-    padding: 16,
-    gap: 12,
+    borderRadius: 12,
+    padding: 13,
+    gap: 9,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   title: {
     flex: 1,
     color: Colors.textPrimary,
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '700',
-    lineHeight: 22,
+    lineHeight: 19,
   },
   heartBtn: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 7,
     borderColor: Colors.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
+  heartBtnActive: {
+    borderColor: Colors.borderAccent,
+    backgroundColor: Colors.accentSofter,
+  },
   chipsRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 6,
   },
   chip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 7,
     borderColor: Colors.borderAccentSoft,
     borderWidth: 1,
     backgroundColor: Colors.accentSofter,
   },
   chipText: {
     color: Colors.accentLight,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
   ingredientsToggle: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 4,
+    gap: 5,
+    paddingVertical: 3,
   },
   ingredientsToggleText: {
     color: Colors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
   },
   ingredientsBody: {
     color: Colors.textSecondary,
-    fontSize: 13,
-    lineHeight: 19,
-    paddingTop: 2,
+    fontSize: 12,
+    lineHeight: 17,
+    paddingTop: 1,
   },
   actionsRow: {
     flexDirection: 'row',
-    gap: 10,
-    marginTop: 2,
-    paddingTop: 6,
+    gap: 8,
+    marginTop: 1,
+    paddingTop: 4,
     borderTopWidth: 1,
     borderTopColor: Colors.borderSubtle,
   },
@@ -182,25 +191,28 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    borderRadius: 10,
+    gap: 6,
+    borderRadius: 9,
     borderColor: Colors.border,
     borderWidth: 1,
-    paddingVertical: 11,
+    paddingVertical: 9,
     backgroundColor: Colors.background,
   },
   swapText: {
     color: Colors.textSecondary,
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
   },
   removeBtn: {
-    width: 44,
-    borderRadius: 10,
+    width: 38,
+    borderRadius: 9,
     borderColor: Colors.errorBorder,
     borderWidth: 1,
     backgroundColor: Colors.errorBg,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  removeBtnDisabled: {
+    opacity: 0.5,
   },
 });

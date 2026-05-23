@@ -44,15 +44,15 @@ export default function DayPill({
 
 const styles = StyleSheet.create({
   pill: {
-    width: 96,
-    paddingVertical: 12,
-    paddingHorizontal: 8,
-    borderRadius: 14,
+    width: 80,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
+    borderRadius: 12,
     borderColor: Colors.border,
     borderWidth: 1,
     backgroundColor: Colors.surface,
     alignItems: 'center',
-    gap: 2,
+    gap: 1,
     position: 'relative',
   },
   pillSelected: {
@@ -61,39 +61,39 @@ const styles = StyleSheet.create({
   },
   dot: {
     position: 'absolute',
-    top: 8,
-    right: 10,
-    width: 6,
-    height: 6,
+    top: 6,
+    right: 8,
+    width: 5,
+    height: 5,
     borderRadius: 3,
     backgroundColor: Colors.accentLight,
   },
   label: {
     color: Colors.accentLight,
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
-    letterSpacing: 0.6,
+    letterSpacing: 0.5,
   },
   labelSelected: {
     color: Colors.accentLight,
   },
   day: {
     color: Colors.textPrimary,
-    fontSize: 26,
+    fontSize: 20,
     fontWeight: '700',
   },
   daySelected: {
     color: Colors.textPrimary,
   },
   kcalPill: {
-    marginTop: 6,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    marginTop: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
     borderRadius: 999,
     backgroundColor: Colors.surfaceMuted,
   },
   kcalText: {
     color: Colors.textMuted,
-    fontSize: 10,
+    fontSize: 9,
   },
 });

@@ -63,13 +63,13 @@ const styles = StyleSheet.create({
   scroll: {
     flexGrow: 0,
     flexShrink: 0,
-    paddingTop: 4,
-    paddingBottom: 6,
+    paddingTop: 2,
+    paddingBottom: 4,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderSubtle,
   },
   row: {
-    gap: 10,
+    gap: 8,
     paddingHorizontal: 4,
     alignItems: 'center',
   },

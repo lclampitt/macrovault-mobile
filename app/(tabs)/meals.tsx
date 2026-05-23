@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../constants/Colors';
@@ -11,7 +11,11 @@ import {
   MEAL_TYPES,
   useMealPlanWeek,
   type MealPlanEntry,
+  type MealType,
 } from '../../hooks/useMealPlanWeek';
+import { useMealPlanMutations } from '../../hooks/useMealPlanMutations';
+import { useSavedMeals } from '../../hooks/useSavedMeals';
+import { useLogDayToMacros } from '../../hooks/useLogDayToMacros';
 import WeekHeader from '../../components/meal-planner/WeekHeader';
 import AISuggestWeekButton from '../../components/meal-planner/AISuggestWeekButton';
 import WeekSummaryBar from '../../components/meal-planner/WeekSummaryBar';
@@ -22,6 +26,10 @@ import MealSection from '../../components/meal-planner/MealSection';
 import DayFooterActions from '../../components/meal-planner/DayFooterActions';
 import MealPlannerSkeleton from '../../components/meal-planner/MealPlannerSkeleton';
 import MealPlannerGate from '../../components/meal-planner/MealPlannerGate';
+import SwapMealModal, {
+  type SwapSlot,
+} from '../../components/meal-planner/SwapMealModal';
+import DeleteConfirmModal from '../../components/progress/DeleteConfirmModal';
 
 function dayIndexInWeek(today: Date, monday: Date): number {
   const ms = today.getTime() - monday.getTime();
@@ -29,16 +37,39 @@ function dayIndexInWeek(today: Date, monday: Date): number {
   return Math.min(Math.max(day, 0), 6);
 }
 
+function fmtShortDay(d: Date): string {
+  return d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function nameKey(s: string): string {
+  return (s || '').trim().toLowerCase();
+}
+
 export default function MealsScreen() {
   const { isPro, loading: subLoading } = useSubscription();
   const today = useMemo(() => new Date(), []);
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(today));
 
-  const { entries, loading, error } = useMealPlanWeek(weekStart);
+  const { entries, planId, loading, error, refetch } = useMealPlanWeek(weekStart);
   const { data: goals } = useUserGoals();
+  const {
+    saving,
+    deletingId,
+    clearing,
+    getOrCreatePlanId,
+    addOrReplace,
+    deleteEntry,
+    clearWeek,
+  } = useMealPlanMutations();
+  const { favoriteNameMap, toggleFavorite } = useSavedMeals();
+  const { loggedDays, busyDay, toggleLogDay, refetch: refetchLog } =
+    useLogDayToMacros(weekStart, entries);
 
-  // Selected day defaults to today when the displayed week IS this week, else
-  // Monday. Recomputed whenever the user jumps to a different week.
+  // Selected day defaults to today when viewing this week, else Monday.
   const initialDay = useMemo(() => {
     const mondayOfToday = getMonday(today);
     if (mondayOfToday.getTime() === weekStart.getTime()) {
@@ -46,11 +77,29 @@ export default function MealsScreen() {
     }
     return 0;
   }, [weekStart, today]);
-
   const [selectedDay, setSelectedDay] = useState<number>(initialDay);
   useEffect(() => {
     setSelectedDay(initialDay);
   }, [initialDay]);
+
+  // -------- Swap modal state --------
+  const [swapSlot, setSwapSlot] = useState<SwapSlot | null>(null);
+  const swapVisible = swapSlot !== null;
+
+  const openSwap = useCallback(
+    (dayIdx: number, mealType: MealType) => {
+      setSwapSlot({
+        day_of_week: dayIdx,
+        meal_type: mealType,
+        dateLabel: fmtShortDay(addDays(weekStart, dayIdx)),
+      });
+    },
+    [weekStart],
+  );
+  const closeSwap = useCallback(() => setSwapSlot(null), []);
+
+  // -------- Confirm-clear modal state --------
+  const [confirmClear, setConfirmClear] = useState(false);
 
   const selectedDate = addDays(weekStart, selectedDay);
   const selectedLabel = fmtLongDay(selectedDate);
@@ -79,7 +128,7 @@ export default function MealsScreen() {
     [entries],
   );
 
-  function entryFor(meal: (typeof MEAL_TYPES)[number]): MealPlanEntry | null {
+  function entryFor(meal: MealType): MealPlanEntry | null {
     return dayEntries.find((e) => e.meal_type === meal) ?? null;
   }
 
@@ -88,6 +137,67 @@ export default function MealsScreen() {
   }
   function goNextWeek() {
     setWeekStart((w) => addDays(w, 7));
+  }
+
+  // -------- Handlers wired into the children --------
+  async function handleAddMeal(meal: Parameters<typeof addOrReplace>[0]['meal']) {
+    if (!swapSlot) return;
+    const pid = planId ?? (await getOrCreatePlanId(weekStart));
+    if (!pid) return;
+    const existing = entries.find(
+      (e) =>
+        e.day_of_week === swapSlot.day_of_week &&
+        e.meal_type === swapSlot.meal_type,
+    ) ?? null;
+    const result = await addOrReplace({
+      planId: pid,
+      day_of_week: swapSlot.day_of_week,
+      meal_type: swapSlot.meal_type,
+      weekStart,
+      meal,
+      existingEntry: existing,
+    });
+    if (!result.error) {
+      closeSwap();
+      await refetch();
+      await refetchLog();
+    }
+  }
+
+  async function handleDelete(entry: MealPlanEntry) {
+    const r = await deleteEntry(entry, weekStart);
+    if (!r.error) {
+      await refetch();
+      await refetchLog();
+    }
+  }
+
+  async function handleToggleFavorite(entry: MealPlanEntry) {
+    await toggleFavorite({
+      meal_name: entry.meal_name,
+      ingredients: entry.ingredients,
+      calories: entry.calories,
+      protein: entry.protein,
+      carbs: entry.carbs,
+      fat: entry.fat,
+    });
+  }
+
+  async function handleLogDay() {
+    await toggleLogDay(selectedDay, dayEntries);
+  }
+
+  async function handleClearWeek() {
+    if (!planId) {
+      setConfirmClear(false);
+      return;
+    }
+    const r = await clearWeek(planId, weekStart);
+    setConfirmClear(false);
+    if (!r.error) {
+      await refetch();
+      await refetchLog();
+    }
   }
 
   if (subLoading) {
@@ -115,6 +225,7 @@ export default function MealsScreen() {
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
         <WeekHeader
           weekStart={weekStart}
@@ -146,18 +257,57 @@ export default function MealsScreen() {
           </View>
         ) : (
           <>
-            <SelectedDayHeader dateLabel={selectedLabel} />
+            <SelectedDayHeader
+              dateLabel={selectedLabel}
+              isLogged={loggedDays.has(selectedDay)}
+              busy={busyDay === selectedDay}
+              onToggleLogDay={handleLogDay}
+            />
             <DayMacroTotals
               totals={dayTotals}
               goalKcal={goals?.calories ?? null}
             />
-            {MEAL_TYPES.map((meal) => (
-              <MealSection key={meal} mealType={meal} entry={entryFor(meal)} />
-            ))}
-            <DayFooterActions />
+            {MEAL_TYPES.map((meal) => {
+              const e = entryFor(meal);
+              return (
+                <MealSection
+                  key={meal}
+                  mealType={meal}
+                  entry={e}
+                  isFavorite={e ? !!favoriteNameMap[nameKey(e.meal_name)] : false}
+                  deleting={!!e && deletingId === e.id}
+                  onOpenSwap={(mt) => openSwap(selectedDay, mt)}
+                  onToggleFavorite={handleToggleFavorite}
+                  onDelete={handleDelete}
+                />
+              );
+            })}
+            <DayFooterActions
+              hasEntries={entries.length > 0}
+              clearing={clearing}
+              onClearWeek={() => setConfirmClear(true)}
+            />
           </>
         )}
       </ScrollView>
+
+      <SwapMealModal
+        visible={swapVisible}
+        slot={swapSlot}
+        saving={saving}
+        onClose={closeSwap}
+        onAdd={handleAddMeal}
+      />
+
+      <DeleteConfirmModal
+        visible={confirmClear}
+        title="Clear week?"
+        message="This removes every meal from this week's plan and unlogs any planner-logged days. This can't be undone."
+        confirmLabel="Clear week"
+        loading={clearing}
+        onCancel={() => setConfirmClear(false)}
+        onConfirm={handleClearWeek}
+      />
     </SafeAreaView>
   );
 }
@@ -168,10 +318,10 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.background,
   },
   scrollContent: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 140,
-    gap: 12,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    paddingBottom: 130,
+    gap: 10,
   },
   loadingWrap: {
     marginTop: 12,

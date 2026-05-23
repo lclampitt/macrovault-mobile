@@ -20,7 +20,7 @@ export default function WeekHeader({ weekStart, onPrevWeek, onNextWeek }: Props)
         accessibilityRole="button"
         accessibilityLabel="Previous week"
       >
-        <Feather name="chevron-left" size={20} color={Colors.textSecondary} />
+        <Feather name="chevron-left" size={17} color={Colors.textSecondary} />
       </Pressable>
       <Text style={styles.label}>
         {fmtShort(weekStart)} – {fmtShort(sun)}
@@ -32,7 +32,7 @@ export default function WeekHeader({ weekStart, onPrevWeek, onNextWeek }: Props)
         accessibilityRole="button"
         accessibilityLabel="Next week"
       >
-        <Feather name="chevron-right" size={20} color={Colors.textSecondary} />
+        <Feather name="chevron-right" size={17} color={Colors.textSecondary} />
       </Pressable>
     </View>
   );
@@ -44,12 +44,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 4,
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   chevBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     borderColor: Colors.border,
     borderWidth: 1,
     backgroundColor: Colors.surface,
@@ -58,7 +58,7 @@ const styles = StyleSheet.create({
   },
   label: {
     color: Colors.textPrimary,
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '600',
   },
 });

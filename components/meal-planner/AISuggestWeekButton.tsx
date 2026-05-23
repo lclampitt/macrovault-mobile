@@ -18,7 +18,7 @@ export default function AISuggestWeekButton() {
       accessibilityRole="button"
       accessibilityLabel="AI suggest week"
     >
-      <Feather name="zap" size={16} color="#fff" />
+      <Feather name="zap" size={13} color="#fff" />
       <Text style={styles.text}>AI suggest week</Text>
     </Pressable>
   );
@@ -29,17 +29,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
+    gap: 6,
     backgroundColor: Colors.accent,
-    borderRadius: 14,
-    paddingVertical: 14,
+    borderRadius: 11,
+    paddingVertical: 10,
   },
   btnPressed: {
     opacity: 0.9,
   },
   text: {
     color: '#fff',
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: '700',
   },
 });

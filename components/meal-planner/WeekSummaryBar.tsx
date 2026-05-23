@@ -39,12 +39,12 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surface,
     borderColor: Colors.border,
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
   },
   text: {
-    fontSize: 13,
+    fontSize: 12,
   },
   muted: {
     color: Colors.textMuted,
