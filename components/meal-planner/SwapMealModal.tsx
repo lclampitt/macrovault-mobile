@@ -20,7 +20,7 @@ import SwapAITab from './SwapAITab';
 
 export type SwapSlot = {
   day_of_week: number;
-  meal_type: 'breakfast' | 'lunch' | 'dinner';
+  meal_type: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   dateLabel: string; // "Mon, May 18"
 };
 
@@ -42,6 +42,7 @@ const MEAL_LABEL: Record<SwapSlot['meal_type'], string> = {
   breakfast: 'Breakfast',
   lunch: 'Lunch',
   dinner: 'Dinner',
+  snack: 'Snack',
 };
 
 export default function SwapMealModal({

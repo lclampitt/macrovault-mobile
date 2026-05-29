@@ -3,6 +3,11 @@ import { useFocusEffect } from 'expo-router';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 import { fmtLocalDate } from '../lib/date';
+import {
+  BODY_PART_LABELS,
+  BODY_PART_ORDER,
+  bodyPartForExerciseName,
+} from '../lib/exercises';
 
 export type DayCategory = 'workout-only' | 'meals-only' | 'both' | 'none';
 
@@ -19,9 +24,22 @@ export type ActivityStats = {
   currentStreak: number;
 };
 
+export type MuscleSplitEntry = {
+  /** Catalog key (e.g. "chest", "back"). */
+  key: string;
+  /** Title-cased label for display. */
+  label: string;
+  /** Number of exercise instances logged in the window. */
+  count: number;
+  /** count / max(count) — useful for bar widths in the UI. */
+  pct: number;
+};
+
 type State = {
   byDate: Record<string, DayState>;
   stats: ActivityStats;
+  /** Body-part counts from logged workouts, last 30 days. Sorted desc by count. */
+  muscleSplit: MuscleSplitEntry[];
   loading: boolean;
   error: string | null;
   refetch: () => Promise<void>;
@@ -39,6 +57,49 @@ function categoryFor(hasW: boolean, hasM: boolean): DayCategory {
   if (hasW) return 'workout-only';
   if (hasM) return 'meals-only';
   return 'none';
+}
+
+/**
+ * Aggregate body-part counts from logged workouts in the last 30 days.
+ * Each exercise instance counts once; sets within an exercise don't compound.
+ */
+function buildMuscleSplit(workouts: WorkoutRow[]): MuscleSplitEntry[] {
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 30);
+  cutoff.setHours(0, 0, 0, 0);
+  const cutoffStr = (() => {
+    const y = cutoff.getFullYear();
+    const m = String(cutoff.getMonth() + 1).padStart(2, '0');
+    const d = String(cutoff.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  })();
+
+  const counts: Record<string, number> = {};
+  for (const w of workouts) {
+    if (!w.workout_date || w.workout_date < cutoffStr) continue;
+    const exs = Array.isArray(w.exercises) ? (w.exercises as Array<{ name?: unknown }>) : [];
+    for (const ex of exs) {
+      const name = typeof ex?.name === 'string' ? ex.name : '';
+      if (!name) continue;
+      const part = bodyPartForExerciseName(name);
+      counts[part] = (counts[part] ?? 0) + 1;
+    }
+  }
+
+  const max = Math.max(0, ...Object.values(counts));
+  return Object.entries(counts)
+    .map(([key, count]) => ({
+      key,
+      label: BODY_PART_LABELS[key] ?? key.replace(/\b\w/g, (c) => c.toUpperCase()),
+      count,
+      pct: max > 0 ? count / max : 0,
+    }))
+    .sort((a, b) => {
+      // Primary: descending count. Tiebreak: catalog order so the chart
+      // doesn't flicker between equal-count parts on refetch.
+      if (b.count !== a.count) return b.count - a.count;
+      return BODY_PART_ORDER.indexOf(a.key) - BODY_PART_ORDER.indexOf(b.key);
+    });
 }
 
 /** Port of buildDayStates() from gainlytics-v2/src/pages/activity.jsx. */
@@ -123,6 +184,7 @@ export function useActivityData(year: number): State {
   const { user } = useAuth();
   const [byDate, setByDate] = useState<Record<string, DayState>>({});
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [muscleSplit, setMuscleSplit] = useState<MuscleSplitEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -154,12 +216,11 @@ export function useActivityData(year: number): State {
       if (foodErr) throw foodErr;
       if (woErr) throw woErr;
 
+      const workoutRows = (workouts ?? []) as WorkoutRow[];
       setByDate(
-        buildDayStates(
-          (workouts ?? []) as WorkoutRow[],
-          (foods ?? []) as FoodRow[],
-        ),
+        buildDayStates(workoutRows, (foods ?? []) as FoodRow[]),
       );
+      setMuscleSplit(buildMuscleSplit(workoutRows));
 
       try {
         setCurrentStreak(await computeStreak(user.id));
@@ -198,5 +259,5 @@ export function useActivityData(year: number): State {
     return { daysLogged, workouts, currentStreak };
   }, [byDate, currentStreak]);
 
-  return { byDate, stats, loading, error, refetch: fetchData };
+  return { byDate, stats, muscleSplit, loading, error, refetch: fetchData };
 }

@@ -9,6 +9,27 @@ export function fmtLocalDate(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/**
+ * Parse a YYYY-MM-DD string as a *local* date (midnight local time).
+ *
+ * `new Date("2026-05-27")` is implicitly UTC — for any timezone west of UTC
+ * the resulting Date represents the prior local day. Calling
+ * `.toLocaleDateString()` on it then displays the wrong calendar day. Always
+ * use this helper to parse YYYY-MM-DD strings coming back from Supabase.
+ */
+export function parseLocalYmd(ymd: string): Date {
+  const [y, m, d] = ymd.split('-').map(Number);
+  return new Date(y, (m ?? 1) - 1, d ?? 1);
+}
+
+/** "May 27" — short month + day formatter that respects local time. */
+export function fmtShortMonthDay(ymd: string): string {
+  return parseLocalYmd(ymd).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 /** Monday-Sunday week range containing `now` (default: today), in YYYY-MM-DD. */
 export function getWeekRange(now: Date = new Date()): { start: string; end: string } {
   const day = now.getDay(); // 0=Sun, 1=Mon, ..., 6=Sat

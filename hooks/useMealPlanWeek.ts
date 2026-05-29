@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { useAuth } from '../lib/auth-context';
 import { fmtLocalDate } from '../lib/date';
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner';
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export type MealPlanEntry = {
   id: string;
@@ -148,9 +148,16 @@ export function fmtLongDay(d: Date): string {
 }
 
 export const DAY_LABELS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-export const MEAL_TYPES: MealType[] = ['breakfast', 'lunch', 'dinner'];
+/** The "core" 3 meal slots — used by every legacy/v1 UI. v2 also renders a
+ *  separate snack section but iterates this list for the main slots. */
+export const MEAL_TYPES: Exclude<MealType, 'snack'>[] = [
+  'breakfast',
+  'lunch',
+  'dinner',
+];
 export const MEAL_TYPE_LABELS: Record<MealType, string> = {
   breakfast: 'BREAKFAST',
   lunch: 'LUNCH',
   dinner: 'DINNER',
+  snack: 'SNACK',
 };

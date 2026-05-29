@@ -39,7 +39,14 @@
           }
         }
       ],
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "@kingstinct/react-native-healthkit",
+        {
+          "NSHealthShareUsageDescription": "MacroVault uses your Apple Health and Apple Watch data to show your workout intensity, heart rate, and calorie burn alongside the data you log in MacroVault.",
+          "NSHealthUpdateUsageDescription": "MacroVault saves your workouts and meals to Apple Health so they're available in Fitness, Activity, and other connected apps."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

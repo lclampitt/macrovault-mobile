@@ -18,6 +18,10 @@ export type ActiveSet = {
   weight: string;
   reps: string;
   completed: boolean;
+  /** Optional reference values from the prior session or template load.
+   *  Used to render the "Last" column in the active workout. */
+  prevWeight?: string;
+  prevReps?: string;
 };
 
 export type ActiveExercise = {
@@ -98,12 +102,22 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
     const exercises: ActiveExercise[] = (template.exercises ?? []).map((ex) => {
       const sets: ActiveSet[] =
         Array.isArray(ex.sets) && ex.sets.length > 0
-          ? ex.sets.map((s) => ({
-              id: localId('set'),
-              weight: s.weight != null ? String(s.weight) : '',
-              reps: s.reps != null ? String(s.reps) : '',
-              completed: false,
-            }))
+          ? ex.sets.map((s) => {
+              const w = s.weight != null ? String(s.weight) : '';
+              const r = s.reps != null ? String(s.reps) : '';
+              // Pre-fill weight/reps AND remember them as the "previous"
+              // reference so the Last column renders e.g. "135×12" on
+              // next load. Tapping that ref re-fills the inputs if the
+              // user clears them.
+              return {
+                id: localId('set'),
+                weight: w,
+                reps: r,
+                completed: false,
+                prevWeight: w || undefined,
+                prevReps: r || undefined,
+              };
+            })
           : [blankSet()];
       return { id: localId('ex'), name: ex.name, sets };
     });

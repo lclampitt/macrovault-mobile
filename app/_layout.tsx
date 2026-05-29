@@ -5,19 +5,28 @@ import { Stack, useRouter, useSegments, usePathname } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BottomSheetModalProvider, type BottomSheetModal } from '@gorhom/bottom-sheet';
+import {
+  useFonts,
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  Inter_800ExtraBold,
+} from '@expo-google-fonts/inter';
 import { AuthProvider, useAuth } from '../lib/auth-context';
 import { ActiveWorkoutProvider, useActiveWorkout } from '../lib/active-workout-context';
 import { ThemeProvider, useTheme } from '../lib/theme-context';
-import HomeHeader from '../components/home/HomeHeader';
+import { DS } from '../lib/design-system';
+import HomeHeaderV2 from '../components/home-v2/HomeHeader';
 import { BottomTabBar } from '../components/BottomTabBar';
 import { MoreSheet } from '../components/MoreSheet';
 import { AppearanceSheet } from '../components/AppearanceSheet';
 import ActiveWorkoutBanner from '../components/active-workout/ActiveWorkoutBanner';
 
 const AUTH_ROUTES = ['sign-in', 'sign-up', 'signup-success'] as const;
-// Focused full-screen flows: no persistent top bar / bottom navbar.
-// The active workout keeps the chrome (navbar + in-progress banner), per
-// the web; only the exercise picker is fully focused.
+// Focused full-screen flows: no persistent top bar / bottom navbar. The
+// active workout keeps the chrome (navbar + in-progress banner), per the
+// web; only the exercise picker is fully focused.
 const FOCUSED_ROUTES = ['exercise-picker'] as const;
 
 function AuthGate() {
@@ -71,14 +80,11 @@ function AuthGate() {
     pathname !== '/log-workout';
 
   return (
-    <View style={[styles.root, { backgroundColor: c.background }]}>
-      <StatusBar style={mode === 'light' ? 'dark' : 'light'} />
+    <View style={[styles.root, { backgroundColor: DS.bg }]}>
+      <StatusBar style="light" />
       {showChrome ? (
-        <SafeAreaView
-          edges={['top']}
-          style={{ backgroundColor: c.background }}
-        >
-          <HomeHeader onOpenAppearance={openAppearance} />
+        <SafeAreaView edges={['top']} style={{ backgroundColor: DS.bg }}>
+          <HomeHeaderV2 onOpenAppearance={openAppearance} />
         </SafeAreaView>
       ) : null}
       {showBanner ? <ActiveWorkoutBanner /> : null}
@@ -86,7 +92,7 @@ function AuthGate() {
         <Stack
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: c.background },
+            contentStyle: { backgroundColor: DS.bg },
           }}
         />
       </View>
@@ -98,6 +104,22 @@ function AuthGate() {
 }
 
 export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+    Inter_800ExtraBold,
+  });
+
+  if (!fontsLoaded) {
+    return (
+      <View style={[styles.root, styles.loading, { backgroundColor: DS.bg }]}>
+        <ActivityIndicator color={DS.accent} />
+      </View>
+    );
+  }
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <BottomSheetModalProvider>

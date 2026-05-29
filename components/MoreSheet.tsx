@@ -13,90 +13,105 @@ import {
   BottomSheetScrollView,
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
-import { Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import {
+  Activity,
+  BookOpen,
+  Calculator,
+  CalendarHeart,
+  ChevronRight,
+  Dumbbell,
+  Heart,
+  Lock,
+  Ruler,
+  Settings as SettingsIcon,
+  Target,
+  TrendingUp,
+  Utensils,
+  X,
+  type LucideIcon,
+} from 'lucide-react-native';
+import { DS, Font, Radius } from '../lib/design-system';
 import { useSubscription } from '../hooks/useSubscription';
-
-type IconRender = (color: string, size: number) => React.ReactNode;
 
 type MoreItem = {
   href: Href;
   label: string;
-  icon: IconRender;
-  pro?: boolean; // requires a subscription
-  tryFree?: boolean; // free users see a "Try free" badge instead of a lock
+  description: string;
+  Icon: LucideIcon;
+  pro?: boolean;
+  tryFree?: boolean;
 };
 
 type MoreSection = {
   label: string;
+  caption: string;
   items: MoreItem[];
 };
 
-// Grouping mirrors the web sidebar (gainlytics-v2 Sidebar.jsx NAV_GROUPS).
+// NOTE: Order + groupings match the brief. ANALYZE = backward-looking; PLAN =
+//   forward-looking; LIBRARY = static reference. Settings sits separately so
+//   it's always one tap from the bottom regardless of plan changes.
 const SECTIONS: MoreSection[] = [
   {
     label: 'ANALYZE',
+    caption: 'Look at what already happened',
     items: [
       {
         href: '/progress',
         label: 'Progress',
-        icon: (c, s) => <Feather name="trending-up" color={c} size={s} />,
+        description: 'Weight, body comp, macros',
+        Icon: TrendingUp,
         pro: true,
       },
       {
         href: '/activity',
         label: 'Activity',
-        icon: (c, s) => (
-          <MaterialCommunityIcons name="calendar-heart" color={c} size={s} />
-        ),
+        description: 'Logging consistency calendar',
+        Icon: CalendarHeart,
+      },
+      {
+        href: '/fitness',
+        label: 'Fitness',
+        description: 'Apple Watch · HR · burn',
+        Icon: Heart,
       },
       {
         href: '/measurements',
         label: 'Measurements',
-        icon: (c, s) => (
-          <MaterialCommunityIcons name="ruler" color={c} size={s} />
-        ),
+        description: 'Track every metric',
+        Icon: Ruler,
       },
       {
         href: '/calculators',
         label: 'Calculators',
-        icon: (c, s) => (
-          <MaterialCommunityIcons
-            name="calculator-variant"
-            color={c}
-            size={s}
-          />
-        ),
+        description: 'Macros and 1RM',
+        Icon: Calculator,
       },
     ],
   },
   {
     label: 'PLAN',
+    caption: 'Set the next move',
     items: [
       {
         href: '/meals',
         label: 'Meal Planner',
-        icon: (c, s) => (
-          <MaterialCommunityIcons
-            name="silverware-fork-knife"
-            color={c}
-            size={s}
-          />
-        ),
+        description: 'Week-ahead plate',
+        Icon: Utensils,
         pro: true,
       },
       {
         href: '/goal-planner',
         label: 'Goal Planner',
-        icon: (c, s) => <Feather name="target" color={c} size={s} />,
+        description: 'Cut · maintain · bulk',
+        Icon: Target,
         pro: true,
       },
       {
         href: '/workouts',
         label: 'Workouts',
-        icon: (c, s) => (
-          <MaterialCommunityIcons name="dumbbell" color={c} size={s} />
-        ),
+        description: 'Templates & history',
+        Icon: Dumbbell,
         pro: true,
         tryFree: true,
       },
@@ -104,11 +119,13 @@ const SECTIONS: MoreSection[] = [
   },
   {
     label: 'LIBRARY',
+    caption: 'Reference material',
     items: [
       {
         href: '/exercise-library',
         label: 'Exercise Library',
-        icon: (c, s) => <Feather name="book-open" color={c} size={s} />,
+        description: 'Catalog + history',
+        Icon: BookOpen,
       },
     ],
   },
@@ -117,13 +134,14 @@ const SECTIONS: MoreSection[] = [
 const SETTINGS_ITEM: MoreItem = {
   href: '/settings',
   label: 'Settings',
-  icon: (c, s) => <Feather name="settings" color={c} size={s} />,
+  description: 'Account, preferences, data',
+  Icon: SettingsIcon,
 };
 
 export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref) {
   const router = useRouter();
   const { isPro } = useSubscription();
-  const snapPoints = useMemo(() => ['85%'], []);
+  const snapPoints = useMemo(() => ['88%'], []);
 
   const handleDismiss = useCallback(() => {
     if (ref && typeof ref !== 'function') {
@@ -146,7 +164,7 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
         {...props}
         appearsOnIndex={0}
         disappearsOnIndex={-1}
-        opacity={0.6}
+        opacity={0.7}
       />
     ),
     [],
@@ -160,26 +178,29 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
       handleIndicatorStyle={styles.handle}
       backdropComponent={renderBackdrop}
     >
-      <View style={styles.topAccent} pointerEvents="none" />
       <BottomSheetScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>All pages</Text>
+          <View style={styles.headerLeft} />
           <Pressable
             onPress={handleDismiss}
             hitSlop={12}
+            style={styles.closeBtn}
             accessibilityRole="button"
             accessibilityLabel="Close menu"
           >
-            <Feather name="x" size={20} color={Colors.textSecondary} />
+            <X size={16} color={DS.textSecondary} strokeWidth={2} />
           </Pressable>
         </View>
 
         {SECTIONS.map((section) => (
-          <View key={section.label}>
-            <Text style={styles.sectionLabel}>{section.label}</Text>
+          <View key={section.label} style={styles.sectionWrap}>
+            <View style={styles.sectionLabelRow}>
+              <Text style={styles.sectionLabel}>{section.label}</Text>
+              <Text style={styles.sectionCaption}>{section.caption}</Text>
+            </View>
             <View style={styles.grid}>
               {section.items.map((item) => (
                 <MoreCard
@@ -193,39 +214,29 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
           </View>
         ))}
 
-        <View style={styles.settingsWrap}>
-          <Pressable
-            onPress={() => navigate(SETTINGS_ITEM.href)}
-            style={({ pressed }) => [
-              styles.settingsRow,
-              pressed && styles.cardPressed,
-            ]}
-            accessibilityRole="button"
-            accessibilityLabel={SETTINGS_ITEM.label}
-          >
-            <View style={styles.settingsIcon}>
-              {SETTINGS_ITEM.icon(Colors.textSecondary, 18)}
-            </View>
+        <Pressable
+          onPress={() => navigate(SETTINGS_ITEM.href)}
+          style={({ pressed }) => [
+            styles.settingsRow,
+            pressed && styles.cardPressed,
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel={SETTINGS_ITEM.label}
+        >
+          <View style={styles.settingsIcon}>
+            <SETTINGS_ITEM.Icon size={18} color={DS.accent} strokeWidth={2} />
+          </View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.settingsLabel}>{SETTINGS_ITEM.label}</Text>
-            <Feather
-              name="chevron-right"
-              size={18}
-              color={Colors.textMuted}
-              style={styles.settingsChevron}
-            />
-          </Pressable>
-        </View>
+            <Text style={styles.settingsDescription}>
+              {SETTINGS_ITEM.description}
+            </Text>
+          </View>
+          <ChevronRight size={16} color={DS.textTertiary} strokeWidth={2} />
+        </Pressable>
 
-        <View style={styles.themeRow}>
-          <View style={styles.themeDot} />
-          <Text style={styles.themeText}>Teal</Text>
-          <MaterialCommunityIcons
-            name="palette-outline"
-            size={16}
-            color={Colors.textSecondary}
-            style={styles.themePaletteIcon}
-          />
-        </View>
+        {/* NOTE: A theme/accent picker used to live here. Replaced by the
+            Appearance sheet wired to the brand bar's palette icon. */}
       </BottomSheetScrollView>
     </BottomSheetModal>
   );
@@ -262,12 +273,17 @@ function MoreCard({ item, isPro, onPress }: MoreCardProps) {
         </View>
       ) : locked ? (
         <View style={styles.lockBadge}>
-          <Feather name="lock" size={11} color={Colors.textMuted} />
+          <Lock size={10} color={DS.textTertiary} strokeWidth={2} />
         </View>
       ) : null}
-      <View style={styles.cardIcon}>{item.icon(Colors.textSecondary, 18)}</View>
+      <View style={styles.cardIcon}>
+        <item.Icon size={18} color={DS.accent} strokeWidth={2} />
+      </View>
       <Text style={styles.cardLabel} numberOfLines={1}>
         {item.label}
+      </Text>
+      <Text style={styles.cardDescription} numberOfLines={2}>
+        {item.description}
       </Text>
     </Pressable>
   );
@@ -275,48 +291,56 @@ function MoreCard({ item, isPro, onPress }: MoreCardProps) {
 
 const styles = StyleSheet.create({
   sheetBg: {
-    backgroundColor: Colors.surface,
+    backgroundColor: DS.surface,
   },
   handle: {
-    backgroundColor: Colors.surfaceMuted,
+    backgroundColor: DS.border,
     width: 36,
     height: 4,
   },
-  topAccent: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: Colors.accent,
-    opacity: 0.7,
-  },
   content: {
     paddingHorizontal: 16,
-    paddingBottom: 28,
+    paddingBottom: 32,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     paddingHorizontal: 4,
-    paddingBottom: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
+    paddingTop: 2,
+    paddingBottom: 4,
   },
-  headerTitle: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '500',
+  headerLeft: {
+    flex: 1,
+  },
+  closeBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: 8,
+    backgroundColor: DS.surfaceFlat,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionWrap: {
+    marginTop: 18,
+  },
+  sectionLabelRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+    paddingHorizontal: 4,
+    marginBottom: 8,
   },
   sectionLabel: {
-    color: Colors.textMuted,
+    color: DS.textTertiary,
+    fontFamily: Font.bold,
     fontSize: 10,
-    fontWeight: '600',
-    letterSpacing: 0.6,
-    paddingHorizontal: 4,
-    paddingTop: 16,
-    paddingBottom: 8,
+    letterSpacing: 0.8,
+  },
+  sectionCaption: {
+    color: DS.textQuaternary,
+    fontFamily: Font.medium,
+    fontSize: 10,
   },
   grid: {
     flexDirection: 'row',
@@ -324,124 +348,113 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   cardSlot: {
-    flexBasis: '31.5%',
+    flexBasis: '47%',
     flexGrow: 1,
-    minHeight: 88,
+    minHeight: 108,
   },
   card: {
-    backgroundColor: Colors.background,
-    borderColor: Colors.border,
+    backgroundColor: DS.bg,
+    borderColor: DS.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    paddingHorizontal: 12,
+    gap: 6,
     position: 'relative',
   },
   cardPressed: {
-    backgroundColor: Colors.surfaceMuted,
+    transform: [{ scale: 0.98 }],
+    backgroundColor: DS.surfaceFlat,
   },
   cardIcon: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 10,
-    backgroundColor: Colors.surfaceMuted,
+    backgroundColor: DS.accentSoft,
+    borderWidth: 1,
+    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 2,
   },
   cardLabel: {
-    color: Colors.textPrimary,
-    fontSize: 12,
-    fontWeight: '500',
-    textAlign: 'center',
+    color: DS.text,
+    fontFamily: Font.bold,
+    fontSize: 13,
+    letterSpacing: -0.2,
+  },
+  cardDescription: {
+    color: DS.textTertiary,
+    fontFamily: Font.medium,
+    fontSize: 10,
+    lineHeight: 13,
   },
   lockBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: Colors.surfaceMuted,
+    top: 8,
+    right: 8,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
+    borderWidth: 1,
     borderRadius: 999,
-    width: 20,
-    height: 20,
+    width: 22,
+    height: 22,
     alignItems: 'center',
     justifyContent: 'center',
   },
   tryFreeBadge: {
     position: 'absolute',
-    top: 6,
-    right: 6,
-    backgroundColor: Colors.accentSoft,
+    top: 8,
+    right: 8,
+    backgroundColor: DS.accentSoft,
+    borderColor: DS.accentBorder,
+    borderWidth: 1,
     borderRadius: 999,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   tryFreeText: {
-    color: Colors.accentLight,
+    color: DS.accent,
+    fontFamily: Font.bold,
     fontSize: 9,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  settingsWrap: {
-    marginTop: 18,
+    letterSpacing: 0.4,
   },
   settingsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.background,
-    borderColor: Colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
+    gap: 12,
+    marginTop: 18,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    gap: 12,
+    backgroundColor: DS.bg,
+    borderColor: DS.border,
+    borderWidth: 1,
+    borderRadius: Radius.card,
   },
   settingsIcon: {
-    width: 36,
-    height: 36,
+    width: 38,
+    height: 38,
     borderRadius: 10,
-    backgroundColor: Colors.surfaceMuted,
+    backgroundColor: DS.accentSoft,
+    borderColor: DS.accentBorder,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsLabel: {
-    color: Colors.textPrimary,
+    color: DS.text,
+    fontFamily: Font.bold,
     fontSize: 14,
-    fontWeight: '500',
-    flex: 1,
+    letterSpacing: -0.2,
   },
-  settingsChevron: {
-    marginLeft: 'auto',
-  },
-  themeRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.background,
-    borderColor: Colors.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 14,
-    position: 'relative',
-  },
-  themeDot: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: Colors.accent,
-    position: 'absolute',
-    left: 14,
-  },
-  themeText: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  themePaletteIcon: {
-    position: 'absolute',
-    right: 14,
+  settingsDescription: {
+    color: DS.textTertiary,
+    fontFamily: Font.medium,
+    fontSize: 11,
+    marginTop: 2,
   },
 });
+
+// NOTE: I removed the unused Activity import? — keeping it imported for the
+// next pass when "Workouts" can branch to a separate activity dashboard view.
+void Activity;

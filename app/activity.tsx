@@ -1,10 +1,25 @@
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Colors } from '../constants/Colors';
-import { useActivityData, type DayCategory, type DayState } from '../hooks/useActivityData';
-import ActivityHeader, { type ActivityView } from '../components/activity/ActivityHeader';
+import { ChevronLeft, Dumbbell, Flame, Layers } from 'lucide-react-native';
+import { DS, Font, Motion, Radius, Tabular } from '../lib/design-system';
+import {
+  useActivityData,
+  type DayCategory,
+  type DayState,
+} from '../hooks/useActivityData';
+import ActivityHeader, {
+  type ActivityView,
+} from '../components/activity/ActivityHeader';
 import YearHeatmap from '../components/activity/YearHeatmap';
 import MonthCalendar from '../components/activity/MonthCalendar';
 import ActivityTooltip from '../components/activity/ActivityTooltip';
@@ -17,6 +32,11 @@ const MONTH_LABELS_FULL = [
   'July', 'August', 'September', 'October', 'November', 'December',
 ];
 
+// Muscle-split is computed in `useActivityData` from the user's logged
+// workouts (last 30 days). Each exercise instance gets bucketed by body part
+// via the static catalog lookup in `lib/exercises.ts`. Custom exercises that
+// aren't in the catalog land in "Other".
+
 type Selected = { dateStr: string; state: DayState; anchor: CellAnchor } | null;
 
 export default function ActivityScreen() {
@@ -28,13 +48,12 @@ export default function ActivityScreen() {
   const [displayedMonth, setDisplayedMonth] = useState(today.getMonth());
   const [selected, setSelected] = useState<Selected>(null);
 
-  const { byDate, stats, loading, error } = useActivityData(year);
+  const { byDate, stats, muscleSplit, loading, error } = useActivityData(year);
 
   const isCurrentYear = year === today.getFullYear();
   const isCurrentMonth = isCurrentYear && displayedMonth === today.getMonth();
   const monthLabel = `${MONTH_LABELS_FULL[displayedMonth]} ${year}`;
 
-  // Month-scoped stats derived from the same yearly dataset (matches web).
   const monthStats = useMemo(() => {
     const prefix = `${year}-${String(displayedMonth + 1).padStart(2, '0')}-`;
     let daysLogged = 0;
@@ -91,10 +110,52 @@ export default function ActivityScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
+      <LinearGradient
+        colors={['rgba(16, 185, 129, 0.10)', 'transparent']}
+        style={styles.topSpine}
+        pointerEvents="none"
+      />
+
+      <View style={styles.header}>
+        <Pressable
+          onPress={handleBack}
+          hitSlop={10}
+          style={styles.iconBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
+          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Activity</Text>
+        <View style={styles.iconBtn} />
+      </View>
+
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Summary stats strip */}
+        <Animated.View
+          entering={FadeInDown.duration(Motion.durationRise)}
+          style={styles.statsRow}
+        >
+          <StatPill
+            label="DAYS LOGGED"
+            value={String(shownDaysLogged)}
+            Icon={Flame}
+          />
+          <StatPill
+            label="WORKOUTS"
+            value={String(shownWorkouts)}
+            Icon={Dumbbell}
+          />
+          <StatPill
+            label="STREAK"
+            value={String(stats.currentStreak)}
+            Icon={Layers}
+          />
+        </Animated.View>
+
         <ActivityHeader
           view={view}
           onViewChange={(v) => {
@@ -117,7 +178,9 @@ export default function ActivityScreen() {
           {loading ? (
             <ActivityGridSkeleton />
           ) : error ? (
-            <Text style={styles.errorText}>Failed to load activity. {error}</Text>
+            <Text style={styles.errorText}>
+              Failed to load activity. {error}
+            </Text>
           ) : view === 'year' ? (
             <YearHeatmap
               byDate={byDate}
@@ -146,6 +209,37 @@ export default function ActivityScreen() {
         </View>
 
         {!isEmpty && !loading && !error ? <ActivityLegend /> : null}
+
+        {/* Muscle split — real data from logged workouts (last 30 days). */}
+        <Animated.View
+          entering={FadeInDown.duration(Motion.durationRise).delay(80)}
+          style={styles.muscleCard}
+        >
+          <View style={styles.muscleHeader}>
+            <Text style={styles.muscleHeaderLabel}>MUSCLE SPLIT</Text>
+            <Text style={styles.muscleHeaderMeta}>Last 30 days</Text>
+          </View>
+          {muscleSplit.length === 0 ? (
+            <Text style={styles.muscleEmpty}>
+              No workouts logged in the last 30 days yet.
+            </Text>
+          ) : (
+            muscleSplit.map((m) => (
+              <View key={m.key} style={styles.muscleRow}>
+                <Text style={styles.muscleLabel}>{m.label}</Text>
+                <View style={styles.muscleBarTrack}>
+                  <View
+                    style={[
+                      styles.muscleBarFill,
+                      { width: `${Math.round(m.pct * 100)}%` },
+                    ]}
+                  />
+                </View>
+                <Text style={[styles.muscleValue, Tabular]}>{m.count}</Text>
+              </View>
+            ))
+          )}
+        </Animated.View>
       </ScrollView>
 
       {selected ? (
@@ -160,25 +254,112 @@ export default function ActivityScreen() {
   );
 }
 
+function StatPill({
+  label,
+  value,
+  Icon,
+}: {
+  label: string;
+  value: string;
+  Icon: typeof Flame;
+}) {
+  return (
+    <View style={styles.statPill}>
+      <View style={styles.statPillIcon}>
+        <Icon size={12} color={DS.accent} strokeWidth={2} />
+      </View>
+      <View>
+        <Text style={[styles.statPillValue, Tabular]}>{value}</Text>
+        <Text style={styles.statPillLabel}>{label}</Text>
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
+  safeArea: { flex: 1, backgroundColor: DS.bg },
+  topSpine: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 140,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: Font.bold,
+    fontSize: 16,
+    color: DS.text,
+    letterSpacing: -0.2,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 120, // clearance for the floating bottom navbar
+    paddingTop: 4,
+    paddingBottom: 140,
+    gap: 14,
+  },
+  statsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statPill: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
+    borderWidth: 1,
+    borderRadius: Radius.card,
+  },
+  statPillIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    backgroundColor: DS.accentSoft,
+    borderColor: DS.accentBorder,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statPillValue: {
+    fontFamily: Font.bold,
+    fontSize: 15,
+    color: DS.text,
+    letterSpacing: -0.3,
+  },
+  statPillLabel: {
+    fontFamily: Font.bold,
+    fontSize: 8,
+    color: DS.textTertiary,
+    letterSpacing: 0.6,
+    marginTop: 1,
   },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: Radius.card,
     padding: 16,
   },
   errorText: {
-    color: Colors.error,
+    fontFamily: Font.medium,
+    color: '#E5736A',
     fontSize: 13,
     paddingVertical: 24,
     textAlign: 'center',
@@ -189,14 +370,78 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   emptyTitle: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '600',
+    fontFamily: Font.bold,
+    color: DS.text,
+    fontSize: 14,
   },
   emptySub: {
-    color: Colors.textMuted,
-    fontSize: 13,
+    fontFamily: Font.medium,
+    color: DS.textTertiary,
+    fontSize: 12,
     textAlign: 'center',
     paddingHorizontal: 20,
+  },
+  muscleCard: {
+    padding: 16,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
+    borderWidth: 1,
+    borderRadius: Radius.card,
+    gap: 8,
+  },
+  muscleHeader: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  muscleHeaderLabel: {
+    fontFamily: Font.bold,
+    fontSize: 10,
+    color: DS.textTertiary,
+    letterSpacing: 0.8,
+  },
+  muscleHeaderMeta: {
+    fontFamily: Font.medium,
+    fontSize: 10,
+    color: DS.textQuaternary,
+  },
+  muscleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  muscleLabel: {
+    fontFamily: Font.semibold,
+    fontSize: 12,
+    color: DS.text,
+    width: 70,
+  },
+  muscleBarTrack: {
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: DS.bg,
+    borderWidth: 1,
+    borderColor: DS.border,
+    overflow: 'hidden',
+  },
+  muscleBarFill: {
+    height: '100%',
+    backgroundColor: DS.accent,
+  },
+  muscleValue: {
+    fontFamily: Font.bold,
+    fontSize: 12,
+    color: DS.text,
+    width: 28,
+    textAlign: 'right',
+  },
+  muscleEmpty: {
+    fontFamily: Font.medium,
+    fontSize: 12,
+    color: DS.textTertiary,
+    paddingVertical: 8,
+    textAlign: 'center',
   },
 });

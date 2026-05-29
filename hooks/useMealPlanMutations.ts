@@ -53,6 +53,9 @@ type State = {
       fat: number;
     }>,
   ) => Promise<Result>;
+  /** Insert a copy of an entry at the same slot (used by the kebab Duplicate
+   *  action). Adds a row — does not replace. */
+  duplicateEntry: (entry: MealPlanEntry) => Promise<Result>;
 };
 
 export function useMealPlanMutations(): State {
@@ -278,6 +281,35 @@ export function useMealPlanMutations(): State {
     [user],
   );
 
+  const duplicateEntry = useCallback(
+    async (entry: MealPlanEntry): Promise<Result> => {
+      if (!user) return { error: 'Not authenticated' };
+      setSaving(true);
+      try {
+        const { error } = await supabase.from('meal_plan_entries').insert({
+          plan_id: entry.plan_id,
+          day_of_week: entry.day_of_week,
+          meal_type: entry.meal_type,
+          meal_name: entry.meal_name,
+          ingredients: entry.ingredients,
+          calories: entry.calories,
+          protein: entry.protein,
+          carbs: entry.carbs,
+          fat: entry.fat,
+        });
+        if (error) throw error;
+        return { error: null };
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Failed to duplicate';
+        console.error('[useMealPlanMutations.duplicateEntry]', message);
+        return { error: message };
+      } finally {
+        setSaving(false);
+      }
+    },
+    [user],
+  );
+
   return {
     saving,
     deletingId,
@@ -287,5 +319,6 @@ export function useMealPlanMutations(): State {
     deleteEntry,
     clearWeek,
     replaceWeek,
+    duplicateEntry,
   };
 }

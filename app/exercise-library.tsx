@@ -10,8 +10,14 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { Colors } from '../constants/Colors';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Dumbbell,
+  Search,
+  X,
+} from 'lucide-react-native';
+import { DS, Font, Radius } from '../lib/design-system';
 import {
   EXERCISES,
   EXERCISE_CATEGORIES,
@@ -48,30 +54,32 @@ export default function ExerciseLibraryScreen() {
         <Pressable
           onPress={handleBack}
           hitSlop={10}
-          style={styles.backBtn}
+          style={styles.iconBtn}
           accessibilityRole="button"
-          accessibilityLabel="Go back"
+          accessibilityLabel="Back"
         >
-          <Feather name="chevron-left" size={20} color={Colors.textPrimary} />
+          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Exercise Library</Text>
-        <View style={styles.headerSpacer} />
+        <View style={styles.headerMeta}>
+          <Text style={styles.headerCount}>{filtered.length}</Text>
+        </View>
       </View>
 
       <View style={styles.searchRow}>
-        <Feather name="search" size={14} color={Colors.textMuted} />
+        <Search size={14} color={DS.textTertiary} strokeWidth={2} />
         <TextInput
           style={styles.searchInput}
           value={query}
           onChangeText={setQuery}
           placeholder="Search by name, muscle, or equipment"
-          placeholderTextColor={Colors.textHint}
+          placeholderTextColor={DS.textQuaternary}
           autoCapitalize="none"
           autoCorrect={false}
         />
         {query.length > 0 ? (
           <Pressable onPress={() => setQuery('')} hitSlop={6}>
-            <Feather name="x" size={14} color={Colors.textMuted} />
+            <X size={14} color={DS.textTertiary} strokeWidth={2} />
           </Pressable>
         ) : null}
       </View>
@@ -100,9 +108,14 @@ export default function ExerciseLibraryScreen() {
         })}
       </ScrollView>
 
+      {/* NOTE: Custom-exercise creation (the "+ Custom" button on web) is not
+          yet wired. Add a small FAB-style button next to the search bar once
+          a `custom_exercises` table exists. */}
+
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Text style={styles.emptyText}>No exercises match.</Text>
+          <Dumbbell size={28} color={DS.textTertiary} strokeWidth={2} />
+          <Text style={styles.emptyText}>No exercises match that filter.</Text>
         </View>
       ) : (
         <FlatList
@@ -142,18 +155,22 @@ function ExerciseRow({
       accessibilityRole="button"
       accessibilityLabel={item.name}
     >
-      <View style={styles.rowLeft}>
-        <Text style={styles.rowName}>{item.name}</Text>
+      <View style={styles.rowIcon}>
+        <Dumbbell size={16} color={DS.accent} strokeWidth={2} />
+      </View>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowName} numberOfLines={1}>
+          {item.name}
+        </Text>
         <View style={styles.rowChips}>
           <RowChip label={titleCase(item.bodyPart)} accent />
           <RowChip label={titleCase(item.equipment)} />
-          <RowChip label={titleCase(item.difficulty)} />
         </View>
-        <Text style={styles.rowMuscle}>
-          Target: {titleCase(item.targetMuscle)}
+        <Text style={styles.rowMuscle} numberOfLines={1}>
+          Target: {titleCase(item.targetMuscle)} · {titleCase(item.difficulty)}
         </Text>
       </View>
-      <Feather name="chevron-right" size={16} color={Colors.textMuted} />
+      <ChevronRight size={14} color={DS.textTertiary} strokeWidth={2} />
     </Pressable>
   );
 }
@@ -169,78 +186,95 @@ function RowChip({ label, accent }: { label: string; accent?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: Colors.background },
+  safeArea: { flex: 1, backgroundColor: DS.bg },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
-  backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+  iconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
-    color: Colors.textPrimary,
-    fontSize: 15,
-    fontWeight: '700',
+    fontFamily: Font.bold,
+    fontSize: 16,
+    color: DS.text,
+    letterSpacing: -0.2,
   },
-  headerSpacer: { width: 32, height: 32 },
+  headerMeta: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: DS.accentSoft,
+    borderColor: DS.accentBorder,
+    borderWidth: 1,
+  },
+  headerCount: {
+    fontFamily: Font.bold,
+    fontSize: 12,
+    color: DS.accent,
+  },
   searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    marginHorizontal: 14,
+    marginHorizontal: 16,
     marginTop: 4,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: Radius.card,
     paddingHorizontal: 12,
-    paddingVertical: 9,
+    paddingVertical: 10,
   },
   searchInput: {
     flex: 1,
-    color: Colors.textPrimary,
+    color: DS.text,
+    fontFamily: Font.medium,
     fontSize: 13,
   },
   pillsScroll: {
-    flexGrow: 0,
     marginTop: 10,
+    maxHeight: 48,
   },
   pillsRow: {
-    paddingHorizontal: 14,
-    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    gap: 8,
     alignItems: 'center',
   },
   pill: {
     paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 999,
-    borderColor: Colors.border,
+    borderColor: DS.border,
     borderWidth: 1,
-    backgroundColor: Colors.surface,
+    backgroundColor: DS.surfaceFlat,
   },
   pillActive: {
-    borderColor: Colors.borderAccent,
-    backgroundColor: Colors.accentSoft,
+    borderColor: DS.accentBorderStrong,
+    backgroundColor: DS.accentSoft,
   },
   pillText: {
-    color: Colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
+    color: DS.textSecondary,
+    fontFamily: Font.semibold,
+    fontSize: 11,
   },
   pillTextActive: {
-    color: Colors.accentLight,
+    color: DS.accent,
   },
   listContent: {
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 130,
+    paddingHorizontal: 16,
+    paddingTop: 14,
+    paddingBottom: 140,
   },
   separator: {
     height: 8,
@@ -248,25 +282,37 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
+    gap: 12,
+    backgroundColor: DS.surface,
+    borderColor: DS.border,
     borderWidth: 1,
-    borderRadius: 12,
+    borderRadius: Radius.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
   rowPressed: {
-    backgroundColor: Colors.surfaceMuted,
+    backgroundColor: DS.surfaceFlat,
   },
-  rowLeft: {
+  rowIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: DS.accentSoft,
+    borderColor: DS.accentBorder,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowBody: {
     flex: 1,
-    gap: 6,
+    gap: 4,
+    minWidth: 0,
   },
   rowName: {
-    color: Colors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: Font.bold,
+    fontSize: 13,
+    color: DS.text,
+    letterSpacing: -0.2,
   },
   rowChips: {
     flexDirection: 'row',
@@ -274,37 +320,41 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   rowMuscle: {
-    color: Colors.textMuted,
-    fontSize: 11,
+    fontFamily: Font.medium,
+    fontSize: 10,
+    color: DS.textTertiary,
   },
   chip: {
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 7,
-    borderColor: Colors.border,
+    borderRadius: 6,
+    borderColor: DS.border,
     borderWidth: 1,
-    backgroundColor: Colors.background,
+    backgroundColor: DS.bg,
   },
   chipAccent: {
-    borderColor: Colors.borderAccentSoft,
-    backgroundColor: Colors.accentSofter,
+    borderColor: DS.accentBorder,
+    backgroundColor: DS.accentSoft,
   },
   chipText: {
-    color: Colors.textMuted,
-    fontSize: 10,
-    fontWeight: '600',
+    fontFamily: Font.bold,
+    fontSize: 9,
+    color: DS.textTertiary,
+    letterSpacing: 0.4,
   },
   chipTextAccent: {
-    color: Colors.accentLight,
+    color: DS.accent,
   },
   empty: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 60,
+    gap: 10,
   },
   emptyText: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 13,
+    color: DS.textTertiary,
   },
 });

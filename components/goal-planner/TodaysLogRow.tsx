@@ -2,6 +2,10 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { Colors } from '../../constants/Colors';
 import type { FoodLogEntry } from '../../hooks/useTodaysFoodLog';
+import {
+  PERIOD_LABELS_UPPER,
+  periodFromHour,
+} from '../../lib/meal-periods';
 
 type Props = {
   entry: FoodLogEntry;
@@ -10,12 +14,13 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-function fmtTime(iso: string): string {
+/** Replaced clock-time display with period label. The timestamp still drives
+ *  sort order — only the label is collapsed to MORNING / NOON / EVENING. */
+function fmtPeriod(iso: string): string {
   try {
-    return new Date(iso).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return PERIOD_LABELS_UPPER[periodFromHour(d.getHours())];
   } catch {
     return '';
   }
@@ -33,7 +38,7 @@ export default function TodaysLogRow({
         <Text style={styles.label} numberOfLines={1}>
           {entry.meal_name || fallbackLabel}
         </Text>
-        <Text style={styles.time}>{fmtTime(entry.created_at)}</Text>
+        <Text style={styles.time}>{fmtPeriod(entry.created_at)}</Text>
       </View>
       <View style={styles.right}>
         <Text style={styles.cal}>{entry.calories} kcal</Text>
@@ -79,7 +84,9 @@ const styles = StyleSheet.create({
   },
   time: {
     color: Colors.textMuted,
-    fontSize: 11,
+    fontSize: 9,
+    fontWeight: '700',
+    letterSpacing: 0.8,
   },
   right: {
     alignItems: 'flex-end',
