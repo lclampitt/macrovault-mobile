@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { History, Layers, type LucideIcon } from 'lucide-react-native';
-import { DS, Font, Radius } from '../../lib/design-system';
+import { Font, Radius } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 export type HubTab = 'templates' | 'recent';
 
@@ -15,6 +16,7 @@ const TABS: { key: HubTab; label: string; Icon: LucideIcon }[] = [
 ];
 
 export default function HubSubNav({ active, onChange }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.wrap} accessibilityRole="tablist">
       {TABS.map(({ key, label, Icon }) => {
@@ -23,20 +25,27 @@ export default function HubSubNav({ active, onChange }: Props) {
           <Pressable
             key={key}
             onPress={() => onChange(key)}
-            style={[styles.tab, isActive && styles.tabActive]}
+            style={[
+              styles.tab,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              isActive && {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryBorderStrong,
+              },
+            ]}
             accessibilityRole="tab"
             accessibilityState={{ selected: isActive }}
             accessibilityLabel={label}
           >
             <Icon
               size={14}
-              color={isActive ? DS.accent : DS.textTertiary}
+              color={isActive ? t.primary : t.textTertiary}
               strokeWidth={2}
             />
             <Text
               style={[
                 styles.text,
-                { color: isActive ? DS.accent : DS.textSecondary },
+                { color: isActive ? t.primary : t.textSecondary },
               ]}
             >
               {label}
@@ -63,13 +72,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 8,
     borderRadius: Radius.cardCompact - 4,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
-  },
-  tabActive: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
   },
   text: {
     fontFamily: Font.semibold,

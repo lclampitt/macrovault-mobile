@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
 import Animated, {
   Easing,
   cancelAnimation,
@@ -8,7 +7,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { DS } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   size?: number;
@@ -18,6 +17,7 @@ type Props = {
  * Live-status dot. Infinite 2s ease-in-out, opacity 1 → 0.5, scale 1 → 0.85.
  */
 export default function PulseDot({ size = 6 }: Props) {
+  const t = useTokens();
   const v = useSharedValue(0);
 
   useEffect(() => {
@@ -42,16 +42,14 @@ export default function PulseDot({ size = 6 }: Props) {
   return (
     <Animated.View
       style={[
-        styles.dot,
-        { width: size, height: size, borderRadius: size / 2 },
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          backgroundColor: t.primary,
+        },
         animatedStyle,
       ]}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  dot: {
-    backgroundColor: DS.accent,
-  },
-});

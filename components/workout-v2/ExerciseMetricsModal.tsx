@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import type { Tokens } from '../../lib/tokens';
 import type { ActiveExercise } from '../../lib/active-workout-context';
 
 type Props = {
@@ -35,6 +37,7 @@ export default function ExerciseMetricsModal({
   priorTotalVolume = null,
   onClose,
 }: Props) {
+  const t = useTokens();
   const metrics = useMemo(() => {
     if (!exercise) {
       return {
@@ -74,11 +77,11 @@ export default function ExerciseMetricsModal({
       : `${metrics.change > 0 ? '+' : metrics.change < 0 ? '−' : ''}${fmtInt(Math.abs(metrics.change))}`;
   const changeColor =
     metrics.change == null
-      ? DS.textTertiary
+      ? t.textTertiary
       : metrics.change === 0
-        ? DS.textSecondary
+        ? t.textSecondary
         : metrics.change > 0
-          ? DS.accent
+          ? t.primary
           : '#A87C5E'; // wrong-direction tan, never red
 
   return (
@@ -88,31 +91,43 @@ export default function ExerciseMetricsModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: t.bgOverlay }]}
+        onPress={onClose}
+      >
         <Pressable
-          style={styles.modal}
+          style={[
+            styles.modal,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          ]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
             <View style={styles.headerLeft}>
-              <Text style={styles.title}>Exercise metrics</Text>
-              <Text style={styles.exerciseName} numberOfLines={1}>
+              <Text style={[styles.title, { color: t.textPrimary }]}>Exercise metrics</Text>
+              <Text
+                style={[styles.exerciseName, { color: t.textSecondary }]}
+                numberOfLines={1}
+              >
                 {exercise.name}
               </Text>
             </View>
             <Pressable
               onPress={onClose}
               hitSlop={6}
-              style={styles.closeBtn}
+              style={[
+                styles.closeBtn,
+                { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <X size={12} color={DS.textSecondary} strokeWidth={2} />
+              <X size={12} color={t.textSecondary} strokeWidth={2} />
             </Pressable>
           </View>
 
-          <Text style={styles.sessionLine}>
-            <Text style={[styles.sessionLineNum, Tabular]}>
+          <Text style={[styles.sessionLine, { color: t.textTertiary }]}>
+            <Text style={[styles.sessionLineNum, Tabular, { color: t.primary }]}>
               {metrics.completedSets}
             </Text>{' '}
             of {exercise.sets.length} sets completed this session
@@ -120,11 +135,13 @@ export default function ExerciseMetricsModal({
 
           <View style={styles.grid}>
             <Tile
+              tokens={t}
               label="TOTAL VOLUME"
               value={fmtInt(metrics.totalVolume)}
               unit="lb"
             />
             <Tile
+              tokens={t}
               label="VOLUME CHANGE"
               value={changeStr}
               unit={metrics.change == null ? 'vs prior' : 'lb'}
@@ -132,11 +149,13 @@ export default function ExerciseMetricsModal({
               footnote={metrics.change == null ? 'No prior session yet' : null}
             />
             <Tile
+              tokens={t}
               label="TOTAL REPS"
               value={fmtInt(metrics.totalReps)}
               unit="reps"
             />
             <Tile
+              tokens={t}
               label="AVG WEIGHT / REP"
               value={
                 metrics.totalReps > 0 ? fmtPerRep(metrics.avgPerRep) : '—'
@@ -151,6 +170,7 @@ export default function ExerciseMetricsModal({
 }
 
 type TileProps = {
+  tokens: Tokens;
   label: string;
   value: string;
   unit: string;
@@ -158,23 +178,30 @@ type TileProps = {
   footnote?: string | null;
 };
 
-function Tile({ label, value, unit, valueColor, footnote }: TileProps) {
+function Tile({ tokens: t, label, value, unit, valueColor, footnote }: TileProps) {
   return (
-    <View style={styles.tile}>
-      <Text style={styles.tileLabel}>{label}</Text>
+    <View
+      style={[
+        styles.tile,
+        { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+      ]}
+    >
+      <Text style={[styles.tileLabel, { color: t.textTertiary }]}>{label}</Text>
       <View style={styles.tileValueRow}>
         <Text
           style={[
             styles.tileValue,
             Tabular,
-            valueColor ? { color: valueColor } : null,
+            { color: valueColor ?? t.textPrimary },
           ]}
         >
           {value}
         </Text>
-        <Text style={styles.tileUnit}>{unit}</Text>
+        <Text style={[styles.tileUnit, { color: t.textTertiary }]}>{unit}</Text>
       </View>
-      {footnote ? <Text style={styles.tileFootnote}>{footnote}</Text> : null}
+      {footnote ? (
+        <Text style={[styles.tileFootnote, { color: t.textQuaternary }]}>{footnote}</Text>
+      ) : null}
     </View>
   );
 }
@@ -182,7 +209,6 @@ function Tile({ label, value, unit, valueColor, footnote }: TileProps) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -190,8 +216,6 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 18,
@@ -209,21 +233,17 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   exerciseName: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textSecondary,
     marginTop: 2,
   },
   closeBtn: {
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -231,12 +251,10 @@ const styles = StyleSheet.create({
   sessionLine: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     marginBottom: 14,
   },
   sessionLineNum: {
     fontFamily: Font.bold,
-    color: DS.accent,
   },
   grid: {
     flexDirection: 'row',
@@ -246,8 +264,6 @@ const styles = StyleSheet.create({
   tile: {
     width: '48%',
     flexGrow: 1,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -256,7 +272,6 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.7,
     marginBottom: 6,
   },
@@ -268,18 +283,15 @@ const styles = StyleSheet.create({
   tileValue: {
     fontFamily: Font.bold,
     fontSize: 20,
-    color: DS.text,
     letterSpacing: -0.4,
   },
   tileUnit: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   tileFootnote: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: DS.textQuaternary,
     marginTop: 4,
     fontStyle: 'italic',
   },

@@ -8,7 +8,8 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { DS, Motion } from '../../lib/design-system';
+import { Motion } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -37,6 +38,7 @@ export default function RingGauge({
   ticks = 12,
   children,
 }: Props) {
+  const t = useTokens();
   const clamped = Math.max(0, Math.min(100, percent));
   const r = (size - strokeWidth - 8) / 2; // 8px inset for tick clearance
   const cx = size / 2;
@@ -79,7 +81,7 @@ export default function RingGauge({
                 y1={y1}
                 x2={x2}
                 y2={y2}
-                stroke="#222"
+                stroke={t.borderDefault}
                 strokeWidth={1}
               />
             );
@@ -94,7 +96,7 @@ export default function RingGauge({
             cy={cy}
             r={r}
             fill="none"
-            stroke={DS.border}
+            stroke={t.bgTrack}
             strokeWidth={strokeWidth}
           />
           {/* Faux glow — wider, low-opacity stroke behind the main one. */}
@@ -103,7 +105,7 @@ export default function RingGauge({
             cy={cy}
             r={r}
             fill="none"
-            stroke={DS.accent}
+            stroke={t.primary}
             strokeOpacity={0.35}
             strokeWidth={strokeWidth + 4}
             strokeLinecap="round"
@@ -116,7 +118,7 @@ export default function RingGauge({
             cy={cy}
             r={r}
             fill="none"
-            stroke={DS.accent}
+            stroke={t.primary}
             strokeWidth={strokeWidth}
             strokeLinecap="round"
             strokeDasharray={`${circumference}, ${circumference}`}

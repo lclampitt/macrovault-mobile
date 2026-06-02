@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.macrovaultmobile"
     },
     "android": {
       "adaptiveIcon": {
@@ -19,7 +20,8 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.anonymous.macrovaultmobile"
     },
     "web": {
       "output": "single",
@@ -45,6 +47,13 @@
         {
           "NSHealthShareUsageDescription": "MacroVault uses your Apple Health and Apple Watch data to show your workout intensity, heart rate, and calorie burn alongside the data you log in MacroVault.",
           "NSHealthUpdateUsageDescription": "MacroVault saves your workouts and meals to Apple Health so they're available in Fitness, Activity, and other connected apps."
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "MacroVault uses Face ID so you can sign in without typing your password. Your credentials stay encrypted in iOS Keychain on this device only."
         }
       ]
     ],

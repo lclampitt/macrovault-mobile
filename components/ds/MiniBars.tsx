@@ -1,23 +1,24 @@
 import { StyleSheet, View } from 'react-native';
-import { DS } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   /** Each value is 0-1 height ratio. */
   values: number[];
-  /** Index of the highlighted (emerald) bar; -1 for none. Defaults to last. */
+  /** Index of the highlighted bar; -1 for none. Defaults to last. */
   highlightIndex?: number;
   height?: number;
 };
 
 /**
- * Thin 4-8px bars, rounded-sm, #1A1A1A inactive / #10B981 highlighted.
- * Used in the Volume·7d tile.
+ * Thin bars. Highlighted bar gets the brand emerald, others use the
+ * theme's track color (warm beige in light, near-black in dark).
  */
 export default function MiniBars({
   values,
   highlightIndex,
   height = 24,
 }: Props) {
+  const t = useTokens();
   const hi = highlightIndex ?? values.length - 1;
   return (
     <View style={[styles.row, { height }]}>
@@ -28,7 +29,7 @@ export default function MiniBars({
             styles.bar,
             {
               height: `${Math.max(2, Math.min(100, v * 100))}%`,
-              backgroundColor: i === hi ? DS.accent : DS.border,
+              backgroundColor: i === hi ? t.primary : t.bgTrack,
             },
           ]}
         />

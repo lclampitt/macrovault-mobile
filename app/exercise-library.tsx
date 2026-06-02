@@ -17,7 +17,8 @@ import {
   Search,
   X,
 } from 'lucide-react-native';
-import { DS, Font, Radius } from '../lib/design-system';
+import { Font, Radius } from '../lib/design-system';
+import { useTokens } from '../lib/theme-context';
 import {
   EXERCISES,
   EXERCISE_CATEGORIES,
@@ -27,6 +28,7 @@ import {
 
 export default function ExerciseLibraryScreen() {
   const router = useRouter();
+  const t = useTokens();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
 
@@ -58,28 +60,48 @@ export default function ExerciseLibraryScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+          <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Exercise Library</Text>
-        <View style={styles.headerMeta}>
-          <Text style={styles.headerCount}>{filtered.length}</Text>
+        <Text style={[styles.headerTitle, { color: t.textPrimary }]}>
+          Exercise Library
+        </Text>
+        <View
+          style={[
+            styles.headerMeta,
+            {
+              backgroundColor: t.primaryTintBg,
+              borderColor: t.primaryTintBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.headerCount, { color: t.primary }]}>
+            {filtered.length}
+          </Text>
         </View>
       </View>
 
-      <View style={styles.searchRow}>
-        <Search size={14} color={DS.textTertiary} strokeWidth={2} />
+      <View
+        style={[
+          styles.searchRow,
+          {
+            backgroundColor: t.bgCard,
+            borderColor: t.borderDefault,
+          },
+        ]}
+      >
+        <Search size={14} color={t.textTertiary} strokeWidth={2} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: t.textPrimary }]}
           value={query}
           onChangeText={setQuery}
           placeholder="Search by name, muscle, or equipment"
-          placeholderTextColor={DS.textQuaternary}
+          placeholderTextColor={t.textQuaternary}
           autoCapitalize="none"
           autoCorrect={false}
         />
         {query.length > 0 ? (
           <Pressable onPress={() => setQuery('')} hitSlop={6}>
-            <X size={14} color={DS.textTertiary} strokeWidth={2} />
+            <X size={14} color={t.textTertiary} strokeWidth={2} />
           </Pressable>
         ) : null}
       </View>
@@ -96,11 +118,22 @@ export default function ExerciseLibraryScreen() {
             <Pressable
               key={c}
               onPress={() => setCategory(c)}
-              style={[styles.pill, active && styles.pillActive]}
+              style={[
+                styles.pill,
+                {
+                  borderColor: active ? t.primaryBorderStrong : t.borderDefault,
+                  backgroundColor: active ? t.primaryTintBg : t.bgCardElevated,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
             >
-              <Text style={[styles.pillText, active && styles.pillTextActive]}>
+              <Text
+                style={[
+                  styles.pillText,
+                  { color: active ? t.primary : t.textSecondary },
+                ]}
+              >
                 {c}
               </Text>
             </Pressable>
@@ -114,8 +147,10 @@ export default function ExerciseLibraryScreen() {
 
       {filtered.length === 0 ? (
         <View style={styles.empty}>
-          <Dumbbell size={28} color={DS.textTertiary} strokeWidth={2} />
-          <Text style={styles.emptyText}>No exercises match that filter.</Text>
+          <Dumbbell size={28} color={t.textTertiary} strokeWidth={2} />
+          <Text style={[styles.emptyText, { color: t.textTertiary }]}>
+            No exercises match that filter.
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -148,37 +183,69 @@ function ExerciseRow({
   item: Exercise;
   onPress: () => void;
 }) {
+  const t = useTokens();
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      style={({ pressed }) => [
+        styles.row,
+        {
+          backgroundColor: pressed ? t.bgCardElevated : t.bgCard,
+          borderColor: t.borderDefault,
+        },
+      ]}
       accessibilityRole="button"
       accessibilityLabel={item.name}
     >
-      <View style={styles.rowIcon}>
-        <Dumbbell size={16} color={DS.accent} strokeWidth={2} />
+      <View
+        style={[
+          styles.rowIcon,
+          {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+      >
+        <Dumbbell size={16} color={t.primary} strokeWidth={2} />
       </View>
       <View style={styles.rowBody}>
-        <Text style={styles.rowName} numberOfLines={1}>
+        <Text style={[styles.rowName, { color: t.textPrimary }]} numberOfLines={1}>
           {item.name}
         </Text>
         <View style={styles.rowChips}>
           <RowChip label={titleCase(item.bodyPart)} accent />
           <RowChip label={titleCase(item.equipment)} />
         </View>
-        <Text style={styles.rowMuscle} numberOfLines={1}>
+        <Text
+          style={[styles.rowMuscle, { color: t.textTertiary }]}
+          numberOfLines={1}
+        >
           Target: {titleCase(item.targetMuscle)} · {titleCase(item.difficulty)}
         </Text>
       </View>
-      <ChevronRight size={14} color={DS.textTertiary} strokeWidth={2} />
+      <ChevronRight size={14} color={t.textTertiary} strokeWidth={2} />
     </Pressable>
   );
 }
 
 function RowChip({ label, accent }: { label: string; accent?: boolean }) {
+  const t = useTokens();
   return (
-    <View style={[styles.chip, accent && styles.chipAccent]}>
-      <Text style={[styles.chipText, accent && styles.chipTextAccent]}>
+    <View
+      style={[
+        styles.chip,
+        {
+          borderColor: accent ? t.primaryTintBorder : t.borderDefault,
+          backgroundColor: accent ? t.primaryTintBg : t.bgPage,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.chipText,
+          { color: accent ? t.primary : t.textTertiary },
+        ]}
+      >
         {label}
       </Text>
     </View>
@@ -186,7 +253,7 @@ function RowChip({ label, accent }: { label: string; accent?: boolean }) {
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: DS.bg },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -204,7 +271,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   headerMeta: {
@@ -213,14 +279,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
   },
   headerCount: {
     fontFamily: Font.bold,
     fontSize: 12,
-    color: DS.accent,
   },
   searchRow: {
     flexDirection: 'row',
@@ -228,8 +291,6 @@ const styles = StyleSheet.create({
     gap: 8,
     marginHorizontal: 16,
     marginTop: 4,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
     paddingHorizontal: 12,
@@ -237,7 +298,6 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    color: DS.text,
     fontFamily: Font.medium,
     fontSize: 13,
   },
@@ -255,21 +315,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 999,
-    borderColor: DS.border,
     borderWidth: 1,
-    backgroundColor: DS.surfaceFlat,
-  },
-  pillActive: {
-    borderColor: DS.accentBorderStrong,
-    backgroundColor: DS.accentSoft,
   },
   pillText: {
-    color: DS.textSecondary,
     fontFamily: Font.semibold,
     fontSize: 11,
-  },
-  pillTextActive: {
-    color: DS.accent,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -283,22 +333,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  rowPressed: {
-    backgroundColor: DS.surfaceFlat,
-  },
   rowIcon: {
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -311,7 +354,6 @@ const styles = StyleSheet.create({
   rowName: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   rowChips: {
@@ -322,28 +364,17 @@ const styles = StyleSheet.create({
   rowMuscle: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   chip: {
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
-    borderColor: DS.border,
     borderWidth: 1,
-    backgroundColor: DS.bg,
-  },
-  chipAccent: {
-    borderColor: DS.accentBorder,
-    backgroundColor: DS.accentSoft,
   },
   chipText: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.4,
-  },
-  chipTextAccent: {
-    color: DS.accent,
   },
   empty: {
     flex: 1,
@@ -355,6 +386,5 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.textTertiary,
   },
 });

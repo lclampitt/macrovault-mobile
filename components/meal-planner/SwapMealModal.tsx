@@ -8,9 +8,10 @@ import {
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Feather } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ChevronLeft } from 'lucide-react-native';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { SwapPayload } from '../../hooks/useMealPlanMutations';
 import SwapMealTabs, { type SwapTab } from './SwapMealTabs';
 import SwapManualEntryTab from './SwapManualEntryTab';
@@ -53,6 +54,8 @@ export default function SwapMealModal({
   onClose,
   onAdd,
 }: Props) {
+  const t = useTokens();
+  const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<SwapTab>('manual');
 
   // Reset to Manual Entry whenever the modal opens for a new slot.
@@ -69,24 +72,49 @@ export default function SwapMealModal({
       transparent={false}
       onRequestClose={onClose}
     >
-      <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      {/* Root paints the page background directly — same color the app
+          shell uses, so on Sakura the cream background carries through.
+          Atmospheric layers from the app shell live behind the Modal's
+          own surface (Modal manages its own root view) so they're not
+          visible here; the Modal is a self-contained sheet. */}
+      <View style={[styles.flex, { backgroundColor: t.bgPage }]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.flex}
         >
-          <View style={styles.header}>
+          {/* Header — explicit insets.top + 8 padding so the title clears
+              the dynamic island / notch on every device. Uses the same
+              rounded-pill back button pattern as the other in-app
+              headers (goal-planner, exercise-library, settings). */}
+          <View
+            style={[
+              styles.header,
+              { paddingTop: insets.top + 8 },
+            ]}
+          >
             <Pressable
               onPress={onClose}
               hitSlop={10}
-              style={styles.backBtn}
+              style={[
+                styles.backBtn,
+                {
+                  backgroundColor: t.bgCard,
+                  borderColor: t.borderDefault,
+                },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <Feather name="chevron-left" size={18} color={Colors.textPrimary} />
+              <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
             </Pressable>
-            <Text style={styles.title}>
+            <Text
+              style={[styles.title, { color: t.textPrimary }]}
+              numberOfLines={1}
+            >
               {slot.dateLabel} — {MEAL_LABEL[slot.meal_type]}
             </Text>
+            {/* Spacer matches back button width so the title stays
+                visually centered. */}
             <View style={styles.spacer} />
           </View>
 
@@ -94,9 +122,15 @@ export default function SwapMealModal({
             <SwapMealTabs active={tab} onChange={setTab} />
           </View>
 
-          <View style={styles.body}>
+          <View
+            style={[
+              styles.body,
+              { paddingBottom: 14 + insets.bottom },
+            ]}
+          >
             {tab === 'ai' ? (
               <SwapAITab
+                dayOfWeek={slot.day_of_week}
                 mealType={slot.meal_type}
                 remaining={
                   aiContext?.remaining ?? {
@@ -119,53 +153,48 @@ export default function SwapMealModal({
             )}
           </View>
         </KeyboardAvoidingView>
-      </SafeAreaView>
+      </View>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.borderSubtle,
+    paddingHorizontal: 20,
+    paddingBottom: 12,
+    gap: 8,
   },
   backBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 9,
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   title: {
     flex: 1,
-    color: Colors.textPrimary,
+    fontFamily: Font.bold,
     fontSize: 14,
-    fontWeight: '700',
     textAlign: 'center',
+    letterSpacing: -0.2,
   },
   spacer: {
-    width: 32,
-    height: 32,
+    width: 36,
+    height: 36,
   },
   tabsWrap: {
     paddingHorizontal: 14,
-    paddingTop: 10,
+    paddingTop: 4,
     paddingBottom: 4,
   },
   body: {
     flex: 1,
     paddingHorizontal: 14,
     paddingTop: 10,
-    paddingBottom: 14,
   },
 });

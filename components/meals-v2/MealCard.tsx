@@ -6,7 +6,8 @@ import {
   Heart,
   MoreHorizontal,
 } from 'lucide-react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { MealPlanEntry, MealType } from '../../hooks/useMealPlanWeek';
 import {
   PERIOD_ICONS,
@@ -83,6 +84,7 @@ export default function MealCard({
   onDuplicate,
   onRemove,
 }: Props) {
+  const t = useTokens();
   const period = periodFromMealType(entry.meal_type);
   const Icon = PERIOD_ICONS[period];
   const ingredients = useMemo(
@@ -106,24 +108,30 @@ export default function MealCard({
       {/* Slot label row (above the card) */}
       <View style={styles.slotRow}>
         <View style={styles.slotLeft}>
-          <Icon size={14} color={DS.accent} strokeWidth={2} />
-          <Text style={styles.slotName}>{SLOT_TITLE[entry.meal_type]}</Text>
+          <Icon size={14} color={t.primary} strokeWidth={2} />
+          <Text style={[styles.slotName, { color: t.textTertiary }]}>{SLOT_TITLE[entry.meal_type]}</Text>
         </View>
-        <Text style={[styles.slotKcal, Tabular]}>
+        <Text style={[styles.slotKcal, Tabular, { color: t.primary }]}>
           {fmtMacroNumber(entry.calories)} kcal
         </Text>
       </View>
 
       {/* Card body */}
-      <View style={styles.card}>
+      <View
+        style={[
+          styles.card,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+        ]}
+      >
         {/* Title + heart + kebab */}
         <View style={styles.titleRow}>
-          <Text style={styles.title}>{entry.meal_name}</Text>
+          <Text style={[styles.title, { color: t.textPrimary }]}>{entry.meal_name}</Text>
           <View style={styles.actionsRow}>
             <Pressable
               onPress={onToggleFavorite}
               style={({ pressed }) => [
                 styles.iconBtn,
+                { backgroundColor: t.bgCardElevated },
                 pressed && styles.iconBtnPressed,
               ]}
               accessibilityRole="button"
@@ -134,9 +142,9 @@ export default function MealCard({
             >
               <Heart
                 size={14}
-                color={isFavorite ? DS.accent : DS.textTertiary}
+                color={isFavorite ? t.primary : t.textTertiary}
                 strokeWidth={2}
-                fill={isFavorite ? DS.accent : 'transparent'}
+                fill={isFavorite ? t.primary : 'transparent'}
               />
             </Pressable>
 
@@ -144,7 +152,11 @@ export default function MealCard({
               onPress={onLog}
               style={({ pressed }) => [
                 styles.iconBtn,
-                styles.iconBtnAccent,
+                {
+                  backgroundColor: t.primaryTintBg,
+                  borderWidth: 1,
+                  borderColor: t.primaryTintBorder,
+                },
                 pressed && styles.iconBtnPressed,
               ]}
               accessibilityRole="button"
@@ -152,7 +164,7 @@ export default function MealCard({
             >
               <ClipboardCheck
                 size={14}
-                color={DS.accent}
+                color={t.primary}
                 strokeWidth={2}
               />
             </Pressable>
@@ -162,6 +174,7 @@ export default function MealCard({
                 onPress={onOpenMenu}
                 style={({ pressed }) => [
                   styles.iconBtn,
+                  { backgroundColor: t.bgCardElevated },
                   pressed && styles.iconBtnPressed,
                 ]}
                 accessibilityRole="button"
@@ -170,7 +183,7 @@ export default function MealCard({
               >
                 <MoreHorizontal
                   size={14}
-                  color={DS.textTertiary}
+                  color={t.textTertiary}
                   strokeWidth={2}
                 />
               </Pressable>
@@ -188,45 +201,51 @@ export default function MealCard({
         {/* Macro dots row */}
         <View style={styles.macroDotsRow}>
           <MacroDot
-            color={DS.accent}
+            color={t.macroProtein}
             value={`${fmtMacroNumber(entry.protein)}g`}
             label="protein"
+            valueColor={t.textPrimary}
+            labelColor={t.textTertiary}
           />
           <MacroDot
-            color={DS.accentLight}
+            color={t.macroCarbs}
             value={`${fmtMacroNumber(entry.carbs)}g`}
             label="carbs"
+            valueColor={t.textPrimary}
+            labelColor={t.textTertiary}
           />
           <MacroDot
-            color={DS.accentMid}
+            color={t.macroFat}
             value={`${fmtMacroNumber(entry.fat)}g`}
             label="fat"
+            valueColor={t.textPrimary}
+            labelColor={t.textTertiary}
           />
         </View>
 
         {/* Stacked macro bar (caloric %) */}
-        <View style={styles.stackedBar}>
+        <View style={[styles.stackedBar, { backgroundColor: t.borderDefault }]}>
           {stack ? (
             <>
               <View
                 style={{
                   width: `${stack.p}%`,
                   height: '100%',
-                  backgroundColor: DS.accent,
+                  backgroundColor: t.macroProtein,
                 }}
               />
               <View
                 style={{
                   width: `${stack.c}%`,
                   height: '100%',
-                  backgroundColor: DS.accentLight,
+                  backgroundColor: t.macroCarbs,
                 }}
               />
               <View
                 style={{
                   width: `${stack.f}%`,
                   height: '100%',
-                  backgroundColor: DS.accentMid,
+                  backgroundColor: t.macroFat,
                 }}
               />
             </>
@@ -242,7 +261,7 @@ export default function MealCard({
         >
           <ChevronDown
             size={14}
-            color={isExpanded ? DS.accent : DS.textTertiary}
+            color={isExpanded ? t.primary : t.textTertiary}
             strokeWidth={2}
             style={{
               transform: [{ rotate: isExpanded ? '180deg' : '0deg' }],
@@ -251,7 +270,7 @@ export default function MealCard({
           <Text
             style={[
               styles.expandToggleText,
-              { color: isExpanded ? DS.accent : DS.textSecondary },
+              { color: isExpanded ? t.primary : t.textSecondary },
             ]}
           >
             {isExpanded
@@ -261,18 +280,18 @@ export default function MealCard({
         </Pressable>
 
         {isExpanded ? (
-          <View style={styles.ingredientsWrap}>
+          <View style={[styles.ingredientsWrap, { borderTopColor: t.borderDefault }]}>
             {ingredients.length === 0 ? (
-              <Text style={styles.noIngredients}>No ingredients listed.</Text>
+              <Text style={[styles.noIngredients, { color: t.textTertiary }]}>No ingredients listed.</Text>
             ) : (
               ingredients.map((ing, idx) => (
                 <View key={idx} style={styles.ingRow}>
-                  <View style={styles.ingDot} />
-                  <Text style={styles.ingName} numberOfLines={1}>
+                  <View style={[styles.ingDot, { backgroundColor: t.textQuaternary }]} />
+                  <Text style={[styles.ingName, { color: t.textPrimary }]} numberOfLines={1}>
                     {ing.name}
                   </Text>
                   {ing.qty ? (
-                    <Text style={[styles.ingQty, Tabular]}>{ing.qty}</Text>
+                    <Text style={[styles.ingQty, Tabular, { color: t.textTertiary }]}>{ing.qty}</Text>
                   ) : null}
                 </View>
               ))
@@ -288,16 +307,20 @@ function MacroDot({
   color,
   value,
   label,
+  valueColor,
+  labelColor,
 }: {
   color: string;
   value: string;
   label: string;
+  valueColor: string;
+  labelColor: string;
 }) {
   return (
     <View style={styles.macroDotCol}>
       <View style={[styles.macroDot, { backgroundColor: color }]} />
-      <Text style={[styles.macroDotValue, Tabular]}>{value}</Text>
-      <Text style={styles.macroDotLabel}>{label}</Text>
+      <Text style={[styles.macroDotValue, Tabular, { color: valueColor }]}>{value}</Text>
+      <Text style={[styles.macroDotLabel, { color: labelColor }]}>{label}</Text>
     </View>
   );
 }
@@ -322,18 +345,14 @@ const styles = StyleSheet.create({
   slotName: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   slotKcal: {
     fontFamily: Font.bold,
     fontSize: 11,
-    color: DS.accent,
   },
   card: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
     padding: 14,
@@ -349,7 +368,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Font.bold,
     fontSize: 15,
-    color: DS.text,
     lineHeight: 20,
   },
   actionsRow: {
@@ -361,17 +379,11 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'center',
   },
   iconBtnPressed: {
     transform: [{ scale: 0.9 }],
-  },
-  iconBtnAccent: {
-    backgroundColor: DS.accentSoft,
-    borderWidth: 1,
-    borderColor: DS.accentBorder,
   },
   kebabWrap: {
     position: 'relative',
@@ -394,19 +406,16 @@ const styles = StyleSheet.create({
   macroDotValue: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.text,
   },
   macroDotLabel: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   stackedBar: {
     flexDirection: 'row',
     height: 3,
     borderRadius: 2,
     overflow: 'hidden',
-    backgroundColor: DS.border,
   },
   expandToggle: {
     flexDirection: 'row',
@@ -423,13 +432,11 @@ const styles = StyleSheet.create({
     paddingTop: 10,
     marginTop: 4,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
     gap: 8,
   },
   noIngredients: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     fontStyle: 'italic',
   },
   ingRow: {
@@ -441,17 +448,14 @@ const styles = StyleSheet.create({
     width: 4,
     height: 4,
     borderRadius: 2,
-    backgroundColor: DS.textDimmest,
   },
   ingName: {
     flex: 1,
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.text,
   },
   ingQty: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
   },
 });

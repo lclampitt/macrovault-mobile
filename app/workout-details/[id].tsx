@@ -11,7 +11,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ChevronLeft, Dumbbell, Trash2 } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import type { Tokens } from '../../lib/tokens';
 import { parseLocalYmd } from '../../lib/date';
 import { useWorkoutById } from '../../hooks/useWorkoutById';
 import { useDeleteWorkout } from '../../hooks/useDeleteWorkout';
@@ -35,6 +37,7 @@ function parseNum(s: string): number {
 
 export default function WorkoutDetailScreen() {
   const router = useRouter();
+  const t = useTokens();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data, loading, error } = useWorkoutById(id ?? null);
   const { remove, deletingId } = useDeleteWorkout();
@@ -88,9 +91,9 @@ export default function WorkoutDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+          <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Workout details</Text>
+        <Text style={[styles.headerTitle, { color: t.textPrimary }]}>Workout details</Text>
         {data ? (
           <Pressable
             onPress={handleDelete}
@@ -102,7 +105,7 @@ export default function WorkoutDetailScreen() {
           >
             <Trash2
               size={16}
-              color={deletingId === data.id ? DS.textTertiary : DESTRUCTIVE}
+              color={deletingId === data.id ? t.textTertiary : DESTRUCTIVE}
               strokeWidth={2}
             />
           </Pressable>
@@ -113,7 +116,7 @@ export default function WorkoutDetailScreen() {
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={DS.accent} />
+          <ActivityIndicator color={t.primary} />
         </View>
       ) : error || !data ? (
         <View style={styles.center}>
@@ -126,18 +129,25 @@ export default function WorkoutDetailScreen() {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.workoutName}>{data.name}</Text>
-          <Text style={styles.dateLabel}>{fmtFullDate(data.date)}</Text>
+          <Text style={[styles.workoutName, { color: t.textPrimary }]}>{data.name}</Text>
+          <Text style={[styles.dateLabel, { color: t.textTertiary }]}>{fmtFullDate(data.date)}</Text>
 
-          <View style={styles.statsCard}>
+          <View
+            style={[
+              styles.statsCard,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+            ]}
+          >
             <Stat
+              tokens={t}
               label="EXERCISES"
               value={String(data.exercises.length)}
             />
-            <View style={styles.statDivider} />
-            <Stat label="SETS" value={String(totals.sets)} />
-            <View style={styles.statDivider} />
+            <View style={[styles.statDivider, { backgroundColor: t.borderDefault }]} />
+            <Stat tokens={t} label="SETS" value={String(totals.sets)} />
+            <View style={[styles.statDivider, { backgroundColor: t.borderDefault }]} />
             <Stat
+              tokens={t}
               label="VOLUME"
               value={Math.round(totals.volume).toLocaleString('en-US')}
               unit="lb"
@@ -145,30 +155,54 @@ export default function WorkoutDetailScreen() {
           </View>
 
           {data.notes ? (
-            <View style={styles.notesCard}>
-              <Text style={styles.notesLabel}>NOTES</Text>
-              <Text style={styles.notesBody}>{data.notes}</Text>
+            <View
+              style={[
+                styles.notesCard,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              ]}
+            >
+              <Text style={[styles.notesLabel, { color: t.textTertiary }]}>NOTES</Text>
+              <Text style={[styles.notesBody, { color: t.textPrimary }]}>{data.notes}</Text>
             </View>
           ) : null}
 
           {data.exercises.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <Text style={styles.emptyText}>
+            <View
+              style={[
+                styles.emptyCard,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              ]}
+            >
+              <Text style={[styles.emptyText, { color: t.textTertiary }]}>
                 No exercises were recorded for this workout.
               </Text>
             </View>
           ) : (
             data.exercises.map((ex, exIdx) => (
-              <View key={exIdx} style={styles.exerciseCard}>
+              <View
+                key={exIdx}
+                style={[
+                  styles.exerciseCard,
+                  { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+                ]}
+              >
                 <View style={styles.exerciseHeader}>
-                  <View style={styles.exerciseIcon}>
-                    <Dumbbell size={14} color={DS.accent} strokeWidth={2} />
+                  <View
+                    style={[
+                      styles.exerciseIcon,
+                      {
+                        backgroundColor: t.primaryTintBg,
+                        borderColor: t.primaryTintBorder,
+                      },
+                    ]}
+                  >
+                    <Dumbbell size={14} color={t.primary} strokeWidth={2} />
                   </View>
                   <View style={styles.exerciseTitleCol}>
-                    <Text style={styles.exerciseTitle} numberOfLines={1}>
+                    <Text style={[styles.exerciseTitle, { color: t.textPrimary }]} numberOfLines={1}>
                       {ex.name}
                     </Text>
-                    <Text style={styles.exerciseSubtitle}>
+                    <Text style={[styles.exerciseSubtitle, { color: t.textTertiary }]}>
                       {ex.sets.length}{' '}
                       {ex.sets.length === 1 ? 'set' : 'sets'}
                     </Text>
@@ -176,32 +210,35 @@ export default function WorkoutDetailScreen() {
                 </View>
 
                 {ex.sets.length === 0 ? (
-                  <Text style={styles.noSetsText}>No sets recorded.</Text>
+                  <Text style={[styles.noSetsText, { color: t.textTertiary }]}>No sets recorded.</Text>
                 ) : (
                   <View style={styles.setsTable}>
-                    <View style={styles.setsHeaderRow}>
-                      <Text style={[styles.setsHeaderText, styles.colSet]}>
+                    <View style={[styles.setsHeaderRow, { borderBottomColor: t.borderSubtle }]}>
+                      <Text style={[styles.setsHeaderText, styles.colSet, { color: t.textTertiary }]}>
                         SET
                       </Text>
-                      <Text style={[styles.setsHeaderText, styles.colWeight]}>
+                      <Text style={[styles.setsHeaderText, styles.colWeight, { color: t.textTertiary }]}>
                         LBS
                       </Text>
-                      <Text style={[styles.setsHeaderText, styles.colReps]}>
+                      <Text style={[styles.setsHeaderText, styles.colReps, { color: t.textTertiary }]}>
                         REPS
                       </Text>
                     </View>
                     {ex.sets.map((s, i) => (
-                      <View key={i} style={styles.setRow}>
-                        <Text style={[styles.setNum, Tabular, styles.colSet]}>
+                      <View
+                        key={i}
+                        style={[styles.setRow, { borderBottomColor: t.borderSubtle }]}
+                      >
+                        <Text style={[styles.setNum, Tabular, styles.colSet, { color: t.textSecondary }]}>
                           {i + 1}
                         </Text>
                         <Text
-                          style={[styles.setValue, Tabular, styles.colWeight]}
+                          style={[styles.setValue, Tabular, styles.colWeight, { color: t.textPrimary }]}
                         >
                           {s.weight || '—'}
                         </Text>
                         <Text
-                          style={[styles.setValue, Tabular, styles.colReps]}
+                          style={[styles.setValue, Tabular, styles.colReps, { color: t.textPrimary }]}
                         >
                           {s.reps || '—'}
                         </Text>
@@ -220,27 +257,29 @@ export default function WorkoutDetailScreen() {
 }
 
 function Stat({
+  tokens: t,
   label,
   value,
   unit,
 }: {
+  tokens: Tokens;
   label: string;
   value: string;
   unit?: string;
 }) {
   return (
     <View style={styles.statCol}>
-      <Text style={styles.statLabel}>{label}</Text>
+      <Text style={[styles.statLabel, { color: t.textTertiary }]}>{label}</Text>
       <View style={styles.statValueRow}>
-        <Text style={[styles.statValue, Tabular]}>{value}</Text>
-        {unit ? <Text style={styles.statUnit}>{unit}</Text> : null}
+        <Text style={[styles.statValue, Tabular, { color: t.textPrimary }]}>{value}</Text>
+        {unit ? <Text style={[styles.statUnit, { color: t.textTertiary }]}>{unit}</Text> : null}
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: DS.bg },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -258,7 +297,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: Font.bold,
     fontSize: 15,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   center: {
@@ -281,31 +319,26 @@ const styles = StyleSheet.create({
   workoutName: {
     fontFamily: Font.bold,
     fontSize: 22,
-    color: DS.text,
     letterSpacing: -0.4,
   },
   dateLabel: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     marginTop: 4,
     marginBottom: 14,
   },
   statsCard: {
     flexDirection: 'row',
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 14,
     paddingVertical: 14,
     marginBottom: 14,
   },
   statCol: { flex: 1, alignItems: 'center', gap: 4 },
-  statDivider: { width: 1, backgroundColor: DS.border },
+  statDivider: { width: 1 },
   statLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.6,
   },
   statValueRow: {
@@ -316,16 +349,12 @@ const styles = StyleSheet.create({
   statValue: {
     fontFamily: Font.bold,
     fontSize: 17,
-    color: DS.text,
   },
   statUnit: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   notesCard: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -335,18 +364,14 @@ const styles = StyleSheet.create({
   notesLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.6,
   },
   notesBody: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.text,
     lineHeight: 17,
   },
   emptyCard: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 24,
@@ -355,12 +380,9 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
   },
   exerciseCard: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 14,
     padding: 14,
@@ -376,8 +398,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.2)',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -386,18 +406,15 @@ const styles = StyleSheet.create({
   exerciseTitle: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   exerciseSubtitle: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
     marginTop: 2,
   },
   noSetsText: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     fontStyle: 'italic',
   },
   setsTable: { gap: 4 },
@@ -406,12 +423,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
     paddingBottom: 4,
     borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
   },
   setsHeaderText: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: '#555',
     letterSpacing: 0.8,
   },
   setRow: {
@@ -419,17 +434,14 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 4,
     borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
   },
   setNum: {
     fontFamily: Font.bold,
     fontSize: 12,
-    color: DS.textSecondary,
   },
   setValue: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   colSet: { width: 36 },
   colWeight: { flex: 1, textAlign: 'center' },

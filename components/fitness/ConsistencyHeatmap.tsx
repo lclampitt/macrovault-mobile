@@ -1,34 +1,40 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import { alphaize } from '../../lib/tokens';
 
 type Props = {
   /** 13 weeks × 7 days (Mon=0..Sun=6), 0–4 intensity. */
   weeks: number[][];
 };
 
-const COLORS = [
-  '#0F0F0F',
-  'rgba(16, 185, 129, 0.2)',
-  'rgba(16, 185, 129, 0.45)',
-  'rgba(16, 185, 129, 0.7)',
-  '#10B981',
-];
-
-const BORDERS = [
-  '#141414',
-  'rgba(16, 185, 129, 0.35)',
-  'rgba(16, 185, 129, 0.5)',
-  'rgba(16, 185, 129, 0.65)',
-  DS.accent,
-];
-
 export default function ConsistencyHeatmap({ weeks }: Props) {
+  const t = useTokens();
+
+  // Filled-cell colors (1–4) are derived from t.primary so they swap
+  // emerald → rose in Sakura. Index 0 (empty) is theme-aware so the grid
+  // reads well on cream backgrounds.
+  const colors = [
+    t.activityEmpty,
+    alphaize(t.primary, 0.2),
+    alphaize(t.primary, 0.45),
+    alphaize(t.primary, 0.7),
+    t.primary,
+  ];
+  const borders = [
+    t.borderSubtle,
+    alphaize(t.primary, 0.35),
+    alphaize(t.primary, 0.5),
+    alphaize(t.primary, 0.65),
+    t.primary,
+  ];
+
   return (
     <View style={styles.outer}>
       {/* Day labels column (M / W / F) */}
       <View style={styles.dayCol}>
         {['M', 'W', 'F'].map((d) => (
-          <Text key={d} style={styles.dayLabel}>
+          <Text key={d} style={[styles.dayLabel, { color: t.textQuaternary }]}>
             {d}
           </Text>
         ))}
@@ -44,8 +50,8 @@ export default function ConsistencyHeatmap({ weeks }: Props) {
                 style={[
                   styles.cell,
                   {
-                    backgroundColor: COLORS[intensity] ?? COLORS[0],
-                    borderColor: BORDERS[intensity] ?? BORDERS[0],
+                    backgroundColor: colors[intensity] ?? colors[0],
+                    borderColor: borders[intensity] ?? borders[0],
                   },
                 ]}
               />
@@ -69,7 +75,6 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: DS.textQuaternary,
     height: 8,
     lineHeight: 8,
   },

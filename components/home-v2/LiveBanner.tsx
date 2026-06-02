@@ -1,24 +1,74 @@
+import { useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import PulseDot from '../ds/PulseDot';
 
 type Props = {
-  /** "MORNING" | "NOON" | "EVENING" | "SNACK". Already upper-cased. */
-  period: string;
-  dayCount: number; // user's streak / day-since-onboard
+  /** First name from the cached profile. Empty / missing / >15 chars → name omitted. */
+  firstName: string | null | undefined;
 };
 
+const MAX_NAME = 15;
+
+function getTimeOfDayGreeting(date: Date = new Date()): string {
+  const h = date.getHours();
+  if (h >= 5 && h < 12) return 'Good morning';
+  if (h >= 12 && h < 17) return 'Good afternoon';
+  if (h >= 17 && h < 21) return 'Good evening';
+  return 'Goodnight'; // 21:00 – 04:59
+}
+
+function buildGreeting(firstName: string | null | undefined): string {
+  const greeting = getTimeOfDayGreeting();
+  const trimmed = (firstName ?? '').trim();
+  if (trimmed.length === 0 || trimmed.length > MAX_NAME) {
+    return `${greeting}.`;
+  }
+  return `${greeting}, ${trimmed}.`;
+}
+
 /**
- * Live status banner under the header — pulsing dot + period + day count.
- * The literal clock time was removed app-wide in favor of period labels.
+ * Personalized time-of-day greeting that sits below the dashboard header.
+ *
+ *   ● GOOD MORNING, LOGAN.
+ *
+ * Visual: same pulsing dot + 10px uppercase tracked emerald label as the
+ * previous status banner. The legacy "· Day N" subtitle has been removed
+ * entirely.
+ *
+ * Refresh cadence: we re-evaluate the greeting every 5 minutes via a single
+ * interval, which is enough to roll over period boundaries (5am, noon, 5pm,
+ * 9pm) for users who leave the app open. We don't tick every minute because
+ * the period text never changes in between.
  */
-export default function LiveBanner({ period, dayCount }: Props) {
+export default function LiveBanner({ firstName }: Props) {
+  const [greeting, setGreeting] = useState(() => buildGreeting(firstName));
+  const t = useTokens();
+
+  // Re-compute when the cached name lands AND on a 5-minute heartbeat so the
+  // period rolls over for long-open sessions.
+  useEffect(() => {
+    setGreeting(buildGreeting(firstName));
+    const id = setInterval(
+      () => setGreeting(buildGreeting(firstName)),
+      5 * 60 * 1000,
+    );
+    return () => clearInterval(id);
+  }, [firstName]);
+
   return (
     <View style={styles.row}>
       <PulseDot size={6} />
-      <Text style={styles.label}>{period.toUpperCase()}</Text>
-      <Text style={styles.dot}>·</Text>
-      <Text style={[styles.meta, Tabular]}>Day {dayCount}</Text>
+      {/* `textTransform: uppercase` keeps screen readers announcing the
+          sentence-case form ("Good morning, Logan") while displaying the
+          uppercase banner. */}
+      <Text
+        style={[styles.label, { color: t.primary }]}
+        accessibilityLabel={greeting}
+      >
+        {greeting}
+      </Text>
     </View>
   );
 }
@@ -32,18 +82,9 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   label: {
-    fontFamily: Font.semibold,
-    fontSize: 11,
-    color: DS.accent,
-    letterSpacing: 0.6,
-  },
-  dot: {
-    color: DS.textDimmest,
-    fontSize: 11,
-  },
-  meta: {
-    fontFamily: Font.medium,
-    fontSize: 11,
-    color: DS.textTertiary,
+    fontFamily: Font.bold,
+    fontSize: 10,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
   },
 });

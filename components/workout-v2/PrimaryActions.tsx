@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Svg, { Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { Activity, Play } from 'lucide-react-native';
-import { DS, Font, Radius } from '../../lib/design-system';
+import { Font, Radius } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   onQuickStart: () => void;
@@ -9,13 +10,14 @@ type Props = {
 };
 
 export default function PrimaryActions({ onQuickStart, onCardio }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.row}>
       <Pressable
         onPress={onQuickStart}
         style={({ pressed }) => [
           styles.tile,
-          styles.tileEmerald,
+          { backgroundColor: t.bgCard, borderColor: t.primaryTintBorder },
           pressed && styles.pressed,
         ]}
         accessibilityRole="button"
@@ -37,35 +39,40 @@ export default function PrimaryActions({ onQuickStart, onCardio }: Props) {
                 r={100}
                 gradientUnits="userSpaceOnUse"
               >
-                <Stop offset={0} stopColor={DS.accent} stopOpacity={0.22} />
-                <Stop offset={1} stopColor={DS.accent} stopOpacity={0} />
+                <Stop offset={0} stopColor={t.primary} stopOpacity={0.22} />
+                <Stop offset={1} stopColor={t.primary} stopOpacity={0} />
               </RadialGradient>
             </Defs>
             <Rect width={100} height={100} fill="url(#qsGlow)" />
           </Svg>
         </View>
-        <View style={styles.emeraldIcon}>
-          <Play size={20} color="#000" fill="#000" strokeWidth={0} />
+        <View style={[styles.emeraldIcon, { backgroundColor: t.primary }]}>
+          <Play size={20} color={t.textOnPrimary} fill={t.textOnPrimary} strokeWidth={0} />
         </View>
-        <Text style={styles.tileTitle}>Quick Start</Text>
-        <Text style={styles.tileSub}>Empty workout</Text>
+        <Text style={[styles.tileTitle, { color: t.textPrimary }]}>Quick Start</Text>
+        <Text style={[styles.tileSub, { color: t.textSecondary }]}>Empty workout</Text>
       </Pressable>
 
       <Pressable
         onPress={onCardio}
         style={({ pressed }) => [
           styles.tile,
-          styles.tileDefault,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
           pressed && styles.pressed,
         ]}
         accessibilityRole="button"
         accessibilityLabel="Start cardio"
       >
-        <View style={styles.darkIcon}>
-          <Activity size={20} color={DS.accent} strokeWidth={2} />
+        <View
+          style={[
+            styles.darkIcon,
+            { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+          ]}
+        >
+          <Activity size={20} color={t.primary} strokeWidth={2} />
         </View>
-        <Text style={styles.tileTitle}>Start Cardio</Text>
-        <Text style={styles.tileSub}>Bike, treadmill, more</Text>
+        <Text style={[styles.tileTitle, { color: t.textPrimary }]}>Start Cardio</Text>
+        <Text style={[styles.tileSub, { color: t.textSecondary }]}>Bike, treadmill, more</Text>
       </Pressable>
     </View>
   );
@@ -84,16 +91,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: 16,
     overflow: 'hidden',
-  },
-  tileEmerald: {
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
-  },
-  tileDefault: {
-    backgroundColor: DS.surface,
-    borderWidth: 1,
-    borderColor: DS.border,
   },
   pressed: {
     transform: [{ scale: 0.98 }],
@@ -102,7 +100,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: DS.accent,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -111,9 +108,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 10,
@@ -121,12 +116,10 @@ const styles = StyleSheet.create({
   tileTitle: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
   },
   tileSub: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
     marginTop: 2,
   },
 });

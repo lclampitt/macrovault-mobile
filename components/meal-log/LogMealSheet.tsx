@@ -24,7 +24,8 @@ import {
   Sparkles,
   X,
 } from 'lucide-react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import {
   PERIOD_ICONS,
   PERIOD_LABELS,
@@ -107,6 +108,7 @@ export default function LogMealSheet({
   onClose,
   onLogged,
 }: Props) {
+  const t = useTokens();
   const [mode, setMode] = useState<Mode>(initialMode);
   const [period, setPeriod] = useState<MealPeriod>(
     () => initialPeriod ?? periodFromDate(),
@@ -133,7 +135,7 @@ export default function LogMealSheet({
       statusBarTranslucent
     >
       <SafeAreaView
-        style={[styles.safeArea, { paddingTop: insets.top }]}
+        style={[styles.safeArea, { paddingTop: insets.top, backgroundColor: t.bgPage }]}
         edges={['bottom']}
       >
         <KeyboardAvoidingView
@@ -141,19 +143,19 @@ export default function LogMealSheet({
           style={styles.flex}
         >
           {/* Drag handle */}
-          <View style={styles.dragHandle} />
+          <View style={[styles.dragHandle, { backgroundColor: t.borderDefault }]} />
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Log a meal</Text>
+            <Text style={[styles.title, { color: t.textPrimary }]}>Log a meal</Text>
             <Pressable
               onPress={onClose}
               hitSlop={10}
-              style={styles.closeBtn}
+              style={[styles.closeBtn, { backgroundColor: t.bgCardElevated }]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <X size={18} color={DS.textSecondary} strokeWidth={2} />
+              <X size={18} color={t.textSecondary} strokeWidth={2} />
             </Pressable>
           </View>
 
@@ -212,6 +214,7 @@ function PeriodPicker({
   selected: MealPeriod;
   onSelect: (p: MealPeriod) => void;
 }) {
+  const t = useTokens();
   return (
     <View style={styles.periodRow}>
       {PERIODS.map((p) => {
@@ -223,7 +226,10 @@ function PeriodPicker({
             onPress={() => onSelect(p)}
             style={({ pressed }) => [
               styles.periodChip,
-              active && styles.periodChipActive,
+              {
+                backgroundColor: active ? t.primary : t.bgCard,
+                borderColor: active ? t.primary : t.borderDefault,
+              },
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
@@ -232,13 +238,13 @@ function PeriodPicker({
           >
             <Icon
               size={14}
-              color={active ? '#000' : DS.textSecondary}
+              color={active ? t.textOnPrimary : t.textSecondary}
               strokeWidth={2}
             />
             <Text
               style={[
                 styles.periodChipLabel,
-                { color: active ? '#000' : DS.textSecondary },
+                { color: active ? t.textOnPrimary : t.textSecondary },
               ]}
             >
               {PERIOD_LABELS[p]}
@@ -261,6 +267,7 @@ function ModeTabs({
   active: Mode;
   onChange: (m: Mode) => void;
 }) {
+  const t = useTokens();
   return (
     <ScrollView
       horizontal
@@ -277,7 +284,10 @@ function ModeTabs({
             disabled={!available}
             style={({ pressed }) => [
               styles.modeChip,
-              isActive && styles.modeChipActive,
+              {
+                backgroundColor: isActive ? t.primaryTintBg : t.bgCardElevated,
+                borderColor: isActive ? t.primaryBorderStrong : t.borderDefault,
+              },
               !available && styles.modeChipDisabled,
               pressed && available && styles.pressed,
             ]}
@@ -289,10 +299,10 @@ function ModeTabs({
               size={13}
               color={
                 !available
-                  ? DS.textQuaternary
+                  ? t.textQuaternary
                   : isActive
-                    ? DS.accent
-                    : DS.textSecondary
+                    ? t.primary
+                    : t.textSecondary
               }
               strokeWidth={2}
             />
@@ -301,10 +311,10 @@ function ModeTabs({
                 styles.modeChipLabel,
                 {
                   color: !available
-                    ? DS.textQuaternary
+                    ? t.textQuaternary
                     : isActive
-                      ? DS.accent
-                      : DS.textSecondary,
+                      ? t.primary
+                      : t.textSecondary,
                 },
               ]}
             >
@@ -337,6 +347,7 @@ function QuickAddMode({
   };
   onLogged: () => void;
 }) {
+  const t = useTokens();
   const [title, setTitle] = useState(initialTitle ?? '');
   const [kcal, setKcal] = useState(
     initialMacros ? String(Math.round(initialMacros.calories)) : '',
@@ -378,8 +389,15 @@ function QuickAddMode({
           value={title}
           onChangeText={setTitle}
           placeholder="e.g. Greek yogurt + berries"
-          placeholderTextColor={DS.textQuaternary}
-          style={styles.textInput}
+          placeholderTextColor={t.textQuaternary}
+          style={[
+            styles.textInput,
+            {
+              backgroundColor: t.bgCardElevated,
+              borderColor: t.borderDefault,
+              color: t.textPrimary,
+            },
+          ]}
           autoCapitalize="sentences"
           returnKeyType="done"
         />
@@ -399,6 +417,7 @@ function QuickAddMode({
         disabled={!canSubmit}
         style={({ pressed }) => [
           styles.cta,
+          { backgroundColor: t.primary },
           !canSubmit && styles.ctaDisabled,
           pressed && canSubmit && styles.pressed,
         ]}
@@ -407,9 +426,9 @@ function QuickAddMode({
         accessibilityState={{ disabled: !canSubmit }}
       >
         {submitting ? (
-          <ActivityIndicator color="#000" />
+          <ActivityIndicator color={t.textOnPrimary} />
         ) : (
-          <Text style={styles.ctaText}>Log meal</Text>
+          <Text style={[styles.ctaText, { color: t.textOnPrimary }]}>Log meal</Text>
         )}
       </Pressable>
     </ScrollView>
@@ -417,9 +436,10 @@ function QuickAddMode({
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const t = useTokens();
   return (
     <View style={styles.field}>
-      <Text style={styles.fieldLabel}>{label.toUpperCase()}</Text>
+      <Text style={[styles.fieldLabel, { color: t.textTertiary }]}>{label.toUpperCase()}</Text>
       {children}
     </View>
   );
@@ -436,21 +456,29 @@ function MacroField({
   onChange: (v: string) => void;
   suffix?: string;
 }) {
+  const t = useTokens();
   return (
     <View style={styles.macroField}>
-      <Text style={styles.macroFieldLabel}>{label.toUpperCase()}</Text>
-      <View style={styles.macroInputRow}>
+      <Text style={[styles.macroFieldLabel, { color: t.textTertiary }]}>{label.toUpperCase()}</Text>
+      <View
+        style={[
+          styles.macroInputRow,
+          { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+        ]}
+      >
         <TextInput
           value={value}
           onChangeText={onChange}
           placeholder="0"
-          placeholderTextColor={DS.textQuaternary}
+          placeholderTextColor={t.textQuaternary}
           keyboardType="decimal-pad"
           inputMode="decimal"
           selectTextOnFocus
-          style={[styles.macroInput, Tabular]}
+          style={[styles.macroInput, { color: t.textPrimary }, Tabular]}
         />
-        {suffix ? <Text style={styles.macroSuffix}>{suffix}</Text> : null}
+        {suffix ? (
+          <Text style={[styles.macroSuffix, { color: t.textTertiary }]}>{suffix}</Text>
+        ) : null}
       </View>
     </View>
   );
@@ -467,6 +495,7 @@ function SearchMode({
   period: MealPeriod;
   onLogged: () => void;
 }) {
+  const t = useTokens();
   const [query, setQuery] = useState('');
   const [grams, setGrams] = useState('100');
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -499,14 +528,19 @@ function SearchMode({
 
   return (
     <View style={styles.searchWrap}>
-      <View style={styles.searchInputWrap}>
-        <Search size={14} color={DS.textTertiary} strokeWidth={2} />
+      <View
+        style={[
+          styles.searchInputWrap,
+          { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+        ]}
+      >
+        <Search size={14} color={t.textTertiary} strokeWidth={2} />
         <TextInput
           value={query}
           onChangeText={setQuery}
           placeholder="Search food (e.g. yogurt, oats, banana)"
-          placeholderTextColor={DS.textQuaternary}
-          style={styles.searchInput}
+          placeholderTextColor={t.textQuaternary}
+          style={[styles.searchInput, { color: t.textPrimary }]}
           autoCapitalize="none"
           autoCorrect={false}
           returnKeyType="search"
@@ -515,7 +549,7 @@ function SearchMode({
 
       {loading ? (
         <View style={styles.searchLoading}>
-          <ActivityIndicator color={DS.accent} />
+          <ActivityIndicator color={t.primary} />
         </View>
       ) : !selected ? (
         <ScrollView
@@ -523,7 +557,7 @@ function SearchMode({
           keyboardShouldPersistTaps="handled"
         >
           {searched && results.length === 0 ? (
-            <Text style={styles.emptyResults}>
+            <Text style={[styles.emptyResults, { color: t.textTertiary }]}>
               Nothing found. Try a different name or use Quick add.
             </Text>
           ) : (
@@ -533,18 +567,19 @@ function SearchMode({
                 onPress={() => setSelectedId(p.id)}
                 style={({ pressed }) => [
                   styles.resultRow,
+                  { backgroundColor: t.bgCard, borderColor: t.borderDefault },
                   pressed && styles.pressed,
                 ]}
               >
                 <View style={{ flex: 1 }}>
-                  <Text style={styles.resultName} numberOfLines={1}>
+                  <Text style={[styles.resultName, { color: t.textPrimary }]} numberOfLines={1}>
                     {p.name}
                   </Text>
                   {p.brand ? (
-                    <Text style={styles.resultBrand}>{p.brand}</Text>
+                    <Text style={[styles.resultBrand, { color: t.textTertiary }]}>{p.brand}</Text>
                   ) : null}
                 </View>
-                <Text style={[styles.resultKcal, Tabular]}>
+                <Text style={[styles.resultKcal, { color: t.primary }, Tabular]}>
                   {Math.round(p.per100.calories)} kcal/100g
                 </Text>
               </Pressable>
@@ -553,9 +588,9 @@ function SearchMode({
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={styles.formContent}>
-          <Text style={styles.selectedName}>{selected.name}</Text>
+          <Text style={[styles.selectedName, { color: t.textPrimary }]}>{selected.name}</Text>
           {selected.brand ? (
-            <Text style={styles.selectedBrand}>{selected.brand}</Text>
+            <Text style={[styles.selectedBrand, { color: t.textTertiary }]}>{selected.brand}</Text>
           ) : null}
 
           <Field label="Grams">
@@ -564,7 +599,14 @@ function SearchMode({
               onChangeText={setGrams}
               keyboardType="numeric"
               inputMode="numeric"
-              style={styles.textInput}
+              style={[
+                styles.textInput,
+                {
+                  backgroundColor: t.bgCardElevated,
+                  borderColor: t.borderDefault,
+                  color: t.textPrimary,
+                },
+              ]}
               selectTextOnFocus
             />
           </Field>
@@ -583,24 +625,26 @@ function SearchMode({
               onPress={() => setSelectedId(null)}
               style={({ pressed }) => [
                 styles.secondaryBtn,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
                 pressed && styles.pressed,
               ]}
             >
-              <Text style={styles.secondaryBtnText}>Back</Text>
+              <Text style={[styles.secondaryBtnText, { color: t.textSecondary }]}>Back</Text>
             </Pressable>
             <Pressable
               onPress={handleSubmit}
               disabled={submitting}
               style={({ pressed }) => [
                 styles.cta,
+                { backgroundColor: t.primary },
                 pressed && !submitting && styles.pressed,
                 { flex: 1 },
               ]}
             >
               {submitting ? (
-                <ActivityIndicator color="#000" />
+                <ActivityIndicator color={t.textOnPrimary} />
               ) : (
-                <Text style={styles.ctaText}>Log meal</Text>
+                <Text style={[styles.ctaText, { color: t.textOnPrimary }]}>Log meal</Text>
               )}
             </Pressable>
           </View>
@@ -611,10 +655,11 @@ function SearchMode({
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
+  const t = useTokens();
   return (
-    <View style={styles.stat}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label.toUpperCase()}</Text>
+    <View style={[styles.stat, { backgroundColor: t.bgCard, borderColor: t.borderDefault }]}>
+      <Text style={[styles.statValue, { color: t.textPrimary }]}>{value}</Text>
+      <Text style={[styles.statLabel, { color: t.textTertiary }]}>{label.toUpperCase()}</Text>
     </View>
   );
 }
@@ -624,6 +669,7 @@ function Stat({ label, value }: { label: string; value: string }) {
 // --------------------------------------------------------------------------
 
 function StubMode({ mode }: { mode: Mode }) {
+  const t = useTokens();
   const copy = {
     scan: 'Barcode scanning is coming soon. It needs camera permission and the OFF lookup hookup.',
     describe:
@@ -633,8 +679,8 @@ function StubMode({ mode }: { mode: Mode }) {
   const Icon = mode === 'scan' ? Barcode : Sparkles;
   return (
     <View style={styles.stubWrap}>
-      <Icon size={28} color={DS.textTertiary} strokeWidth={2} />
-      <Text style={styles.stubBody}>{copy[key as 'scan' | 'describe']}</Text>
+      <Icon size={28} color={t.textTertiary} strokeWidth={2} />
+      <Text style={[styles.stubBody, { color: t.textSecondary }]}>{copy[key as 'scan' | 'describe']}</Text>
     </View>
   );
 }
@@ -652,6 +698,7 @@ function PlanMode({
   plannedMeals: MealPlanEntry[];
   onLogged: () => void;
 }) {
+  const t = useTokens();
   const { log, submitting } = useLogMeal();
   const [loggingId, setLoggingId] = useState<string | null>(null);
 
@@ -673,8 +720,8 @@ function PlanMode({
   if (plannedMeals.length === 0) {
     return (
       <View style={styles.stubWrap}>
-        <Bookmark size={28} color={DS.textTertiary} strokeWidth={2} />
-        <Text style={styles.stubBody}>
+        <Bookmark size={28} color={t.textTertiary} strokeWidth={2} />
+        <Text style={[styles.stubBody, { color: t.textSecondary }]}>
           You don't have any meals planned for today. Build a plan in the
           Meals tab and they'll show up here for one-tap logging.
         </Text>
@@ -687,7 +734,7 @@ function PlanMode({
       contentContainerStyle={styles.planList}
       keyboardShouldPersistTaps="handled"
     >
-      <Text style={styles.planHint}>
+      <Text style={[styles.planHint, { color: t.textTertiary }]}>
         Tap a planned meal to log it instantly. Macros are copied as-is.
       </Text>
       {plannedMeals.map((entry) => {
@@ -699,28 +746,34 @@ function PlanMode({
             disabled={submitting}
             style={({ pressed }) => [
               styles.planRow,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
               pressed && !submitting && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel={`Log ${entry.meal_name}, ${Math.round(entry.calories)} kcal`}
           >
-            <View style={styles.planIcon}>
+            <View
+              style={[
+                styles.planIcon,
+                { backgroundColor: t.primaryTintBg, borderColor: t.primaryTintBorder },
+              ]}
+            >
               {isLogging ? (
-                <ActivityIndicator size="small" color={DS.accent} />
+                <ActivityIndicator size="small" color={t.primary} />
               ) : (
-                <Bookmark size={14} color={DS.accent} strokeWidth={2} />
+                <Bookmark size={14} color={t.primary} strokeWidth={2} />
               )}
             </View>
             <View style={styles.planBody}>
-              <Text style={styles.planName} numberOfLines={1}>
+              <Text style={[styles.planName, { color: t.textPrimary }]} numberOfLines={1}>
                 {entry.meal_name}
               </Text>
-              <Text style={styles.planMeta}>
+              <Text style={[styles.planMeta, { color: t.textTertiary }]}>
                 {Math.round(entry.calories)} kcal · {Math.round(entry.protein)}
                 P {Math.round(entry.carbs)}C {Math.round(entry.fat)}F
               </Text>
             </View>
-            <Text style={[styles.planKcal, Tabular]}>
+            <Text style={[styles.planKcal, { color: t.primary }, Tabular]}>
               {Math.round(entry.calories)}
             </Text>
           </Pressable>
@@ -737,7 +790,6 @@ function PlanMode({
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: DS.bg,
   },
   flex: { flex: 1 },
   dragHandle: {
@@ -745,7 +797,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: DS.border,
     marginTop: 6,
     marginBottom: 4,
   },
@@ -760,14 +811,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 18,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: DS.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -786,13 +835,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 10,
     borderRadius: 10,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
-  },
-  periodChipActive: {
-    backgroundColor: DS.accent,
-    borderColor: DS.accent,
   },
   periodChipLabel: {
     fontFamily: Font.bold,
@@ -815,13 +858,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 999,
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
-  },
-  modeChipActive: {
-    borderColor: DS.accentBorderStrong,
-    backgroundColor: DS.accentSoft,
   },
   modeChipDisabled: {
     opacity: 0.45,
@@ -843,16 +880,12 @@ const styles = StyleSheet.create({
     fontFamily: Font.bold,
     fontSize: 9,
     letterSpacing: 0.8,
-    color: DS.textTertiary,
   },
   textInput: {
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: Radius.card,
     paddingHorizontal: 12,
     paddingVertical: 12,
-    color: DS.text,
     fontFamily: Font.medium,
     fontSize: 14,
   },
@@ -869,29 +902,24 @@ const styles = StyleSheet.create({
   macroFieldLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
   },
   macroInputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: 10,
     paddingHorizontal: 10,
   },
   macroInput: {
     flex: 1,
     paddingVertical: 10,
-    color: DS.text,
     fontFamily: Font.bold,
     fontSize: 15,
   },
   macroSuffix: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     marginLeft: 4,
   },
   errorText: {
@@ -903,7 +931,6 @@ const styles = StyleSheet.create({
     marginTop: 6,
     paddingVertical: 14,
     borderRadius: 12,
-    backgroundColor: DS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -911,7 +938,6 @@ const styles = StyleSheet.create({
   ctaText: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: '#000',
     letterSpacing: 0.2,
   },
   // ---- Search mode
@@ -924,14 +950,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: DS.surfaceFlat,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: DS.border,
   },
   searchInput: {
     flex: 1,
-    color: DS.text,
     fontFamily: Font.medium,
     fontSize: 14,
   },
@@ -947,7 +970,6 @@ const styles = StyleSheet.create({
   emptyResults: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     paddingVertical: 24,
   },
@@ -957,36 +979,29 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingVertical: 12,
     paddingHorizontal: 12,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: 10,
   },
   resultName: {
     fontFamily: Font.semibold,
     fontSize: 13,
-    color: DS.text,
   },
   resultBrand: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     marginTop: 2,
   },
   resultKcal: {
     fontFamily: Font.bold,
     fontSize: 11,
-    color: DS.accent,
   },
   selectedName: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
   },
   selectedBrand: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     marginTop: -8,
   },
   scaledRow: {
@@ -999,20 +1014,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 2,
     paddingVertical: 10,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: 10,
   },
   statValue: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
   },
   statLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
   },
   searchActionRow: {
@@ -1024,14 +1035,11 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     paddingHorizontal: 20,
     borderRadius: 12,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
   },
   secondaryBtnText: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.textSecondary,
   },
   // ---- Stub
   stubWrap: {
@@ -1044,7 +1052,6 @@ const styles = StyleSheet.create({
   stubBody: {
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.textSecondary,
     textAlign: 'center',
     lineHeight: 19,
   },
@@ -1057,7 +1064,6 @@ const styles = StyleSheet.create({
   planHint: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     marginBottom: 4,
   },
   planRow: {
@@ -1066,8 +1072,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 12,
   },
@@ -1075,8 +1079,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1085,17 +1087,14 @@ const styles = StyleSheet.create({
   planName: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   planMeta: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   planKcal: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.accent,
   },
 });

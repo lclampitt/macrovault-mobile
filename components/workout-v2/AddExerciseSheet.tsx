@@ -10,7 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Dumbbell, Plus, Search, X } from 'lucide-react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import {
   EXERCISES,
   EXERCISE_CATEGORIES,
@@ -25,6 +26,7 @@ type Props = {
 };
 
 export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
+  const t = useTokens();
   const [category, setCategory] = useState('All');
   const [query, setQuery] = useState('');
 
@@ -49,32 +51,49 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
       animationType="slide"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
-        <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: t.bgOverlay }]}
+        onPress={onClose}
+      >
+        <Pressable
+          style={[
+            styles.sheet,
+            { backgroundColor: t.bgCard, borderTopColor: t.borderDefault },
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <SafeAreaView edges={['bottom']} style={styles.safeInner}>
-            <View style={styles.handle} />
+            <View style={[styles.handle, { backgroundColor: t.borderStrong }]} />
 
             <View style={styles.header}>
-              <Text style={styles.title}>Add exercise</Text>
+              <Text style={[styles.title, { color: t.textPrimary }]}>Add exercise</Text>
               <Pressable
                 onPress={onClose}
-                style={styles.closeBtn}
+                style={[
+                  styles.closeBtn,
+                  { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel="Close"
               >
-                <X size={14} color={DS.textSecondary} strokeWidth={2} />
+                <X size={14} color={t.textSecondary} strokeWidth={2} />
               </Pressable>
             </View>
 
             {/* Search */}
-            <View style={styles.searchWrap}>
-              <Search size={14} color={DS.textTertiary} strokeWidth={2} />
+            <View
+              style={[
+                styles.searchWrap,
+                { backgroundColor: t.bgInput, borderColor: t.borderDefault },
+              ]}
+            >
+              <Search size={14} color={t.textTertiary} strokeWidth={2} />
               <TextInput
                 value={query}
                 onChangeText={setQuery}
                 placeholder="Search exercises…"
-                placeholderTextColor={DS.textTertiary}
-                style={styles.searchInput}
+                placeholderTextColor={t.textTertiary}
+                style={[styles.searchInput, { color: t.textPrimary }]}
                 autoCapitalize="none"
                 autoCorrect={false}
               />
@@ -84,7 +103,7 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
                   hitSlop={6}
                   accessibilityLabel="Clear search"
                 >
-                  <X size={14} color={DS.textTertiary} strokeWidth={2} />
+                  <X size={14} color={t.textTertiary} strokeWidth={2} />
                 </Pressable>
               ) : null}
             </View>
@@ -102,14 +121,18 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
                   <Pressable
                     key={c}
                     onPress={() => setCategory(c)}
-                    style={[styles.pill, active && styles.pillActive]}
+                    style={[
+                      styles.pill,
+                      { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                      active && { backgroundColor: t.primary, borderColor: t.primary },
+                    ]}
                     accessibilityRole="button"
                     accessibilityState={{ selected: active }}
                   >
                     <Text
                       style={[
                         styles.pillText,
-                        active && styles.pillTextActive,
+                        { color: active ? t.textOnPrimary : t.textSecondary },
                       ]}
                     >
                       {c}
@@ -127,7 +150,9 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
             >
               {filtered.length === 0 ? (
                 <View style={styles.empty}>
-                  <Text style={styles.emptyText}>No exercises match.</Text>
+                  <Text style={[styles.emptyText, { color: t.textTertiary }]}>
+                    No exercises match.
+                  </Text>
                 </View>
               ) : (
                 filtered.map((ex) => (
@@ -136,33 +161,42 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
                     onPress={() => onPick(ex.name)}
                     style={({ pressed }) => [
                       styles.row,
-                      pressed && styles.rowPressed,
+                      { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                      pressed && { backgroundColor: t.borderDefault },
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Add ${ex.name}`}
                   >
-                    <View style={styles.rowIcon}>
+                    <View
+                      style={[
+                        styles.rowIcon,
+                        {
+                          backgroundColor: t.primaryTintBg,
+                          borderColor: t.primaryTintBorder,
+                        },
+                      ]}
+                    >
                       <Dumbbell
                         size={14}
-                        color={DS.accent}
+                        color={t.primary}
                         strokeWidth={2}
                       />
                     </View>
                     <View style={styles.rowBody}>
-                      <Text style={styles.rowName} numberOfLines={1}>
+                      <Text style={[styles.rowName, { color: t.textPrimary }]} numberOfLines={1}>
                         {ex.name}
                       </Text>
                       <View style={styles.rowMetaRow}>
-                        <Text style={styles.rowMeta}>
+                        <Text style={[styles.rowMeta, { color: t.textTertiary }]}>
                           {titleCase(ex.bodyPart)}
                         </Text>
-                        <Text style={styles.rowMetaDot}>·</Text>
-                        <Text style={styles.rowMeta}>
+                        <Text style={[styles.rowMetaDot, { color: t.textQuaternary }]}>·</Text>
+                        <Text style={[styles.rowMeta, { color: t.textTertiary }]}>
                           {titleCase(ex.equipment)}
                         </Text>
                       </View>
                     </View>
-                    <Plus size={16} color={DS.accent} strokeWidth={2.5} />
+                    <Plus size={16} color={t.primary} strokeWidth={2.5} />
                   </Pressable>
                 ))
               )}
@@ -177,15 +211,12 @@ export default function AddExerciseSheet({ visible, onClose, onPick }: Props) {
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: DS.surface,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
     paddingHorizontal: 20,
     paddingTop: 8,
     maxHeight: '85%',
@@ -197,7 +228,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     alignSelf: 'center',
     marginVertical: 8,
   },
@@ -210,15 +240,12 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 18,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   closeBtn: {
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -227,8 +254,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
@@ -239,7 +264,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.text,
     padding: 0,
   },
   pillsScroll: {
@@ -254,21 +278,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
-  },
-  pillActive: {
-    backgroundColor: DS.accent,
-    borderColor: DS.accent,
   },
   pillText: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textSecondary,
-  },
-  pillTextActive: {
-    color: '#000',
   },
   list: {
     flex: 1,
@@ -280,23 +294,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
     marginBottom: 6,
   },
-  rowPressed: {
-    backgroundColor: '#141414',
-  },
   rowIcon: {
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.2)',
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -307,7 +314,6 @@ const styles = StyleSheet.create({
   rowName: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   rowMetaRow: {
     flexDirection: 'row',
@@ -318,10 +324,8 @@ const styles = StyleSheet.create({
   rowMeta: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   rowMetaDot: {
-    color: DS.textDimmest,
     fontSize: 10,
   },
   empty: {
@@ -331,6 +335,5 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.textTertiary,
   },
 });

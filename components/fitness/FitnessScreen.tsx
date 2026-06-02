@@ -27,7 +27,9 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Motion, Tabular } from '../../lib/design-system';
+import { Font, Motion, Tabular } from '../../lib/design-system';
+import { useTheme, useTokens } from '../../lib/theme-context';
+import { alphaize, SAKURA_BURGUNDY } from '../../lib/tokens';
 import { useHealthKit } from '../../hooks/useHealthKit';
 import type { BurnRange, HRZoneBucket } from '../../lib/healthkit-types';
 import DailyBurnChart from './DailyBurnChart';
@@ -57,12 +59,18 @@ function fmtMonth(d: Date): string {
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
 
+// Coral red used for negative deltas / unfavorable resting-HR changes.
+const DESTRUCTIVE = '#E5736A';
+
 // --------------------------------------------------------------------------
 // Screen
 // --------------------------------------------------------------------------
 
 export default function FitnessScreen() {
   const router = useRouter();
+  const t = useTokens();
+  const { appearanceTheme } = useTheme();
+  const isSakura = appearanceTheme === 'sakura';
   const { data, loading, requestPermissions, setRange, setMonth } = useHealthKit();
 
   function handleBack() {
@@ -85,36 +93,44 @@ export default function FitnessScreen() {
     data.status === 'disconnected' || data.status === 'denied';
   const hkUnavailable = data.status === 'unavailable';
 
+  const cardStyle = {
+    backgroundColor: t.bgCard,
+    borderColor: t.borderDefault,
+  };
+  const iconBtnStyle = {
+    backgroundColor: t.bgCard,
+    borderColor: t.borderDefault,
+  };
+
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.10)', 'transparent']}
-        style={styles.topSpine}
-        pointerEvents="none"
-      />
+      {/* Top emerald glow moved to the app shell — see _layout.tsx's
+          <TopGradientGlow />. */}
 
       {/* Header */}
       <View style={styles.header}>
         <Pressable
           onPress={handleBack}
           hitSlop={10}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, iconBtnStyle]}
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+          <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Fitness</Text>
+        <Text style={[styles.headerTitle, { color: t.textPrimary }]}>
+          Fitness
+        </Text>
         <Pressable
           onPress={() => {
             /* NOTE: future kebab menu — set max HR, force refresh, etc. */
           }}
           hitSlop={10}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, iconBtnStyle]}
           accessibilityRole="button"
           accessibilityLabel="More options"
         >
-          <MoreHorizontal size={16} color={DS.textSecondary} strokeWidth={2} />
+          <MoreHorizontal size={16} color={t.textSecondary} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -131,17 +147,22 @@ export default function FitnessScreen() {
               next.setMonth(next.getMonth() - 1);
               setMonth(next);
             }}
-            style={styles.monthArrow}
+            style={[
+              styles.monthArrow,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Previous month"
           >
-            <ChevronLeft size={14} color={DS.textTertiary} strokeWidth={2} />
+            <ChevronLeft size={14} color={t.textTertiary} strokeWidth={2} />
           </Pressable>
           <View style={styles.monthCenter}>
-            <Text style={styles.monthCaption}>
+            <Text style={[styles.monthCaption, { color: t.primary }]}>
               {isToday ? 'THIS MONTH' : ''}
             </Text>
-            <Text style={styles.monthTitle}>{fmtMonth(data.month)}</Text>
+            <Text style={[styles.monthTitle, { color: t.textPrimary }]}>
+              {fmtMonth(data.month)}
+            </Text>
           </View>
           <Pressable
             onPress={() => {
@@ -151,12 +172,16 @@ export default function FitnessScreen() {
               setMonth(next);
             }}
             disabled={isToday}
-            style={[styles.monthArrow, isToday && styles.monthArrowDisabled]}
+            style={[
+              styles.monthArrow,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              isToday && styles.monthArrowDisabled,
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Next month"
             accessibilityState={{ disabled: isToday }}
           >
-            <ChevronRight size={14} color={DS.textTertiary} strokeWidth={2} />
+            <ChevronRight size={14} color={t.textTertiary} strokeWidth={2} />
           </Pressable>
         </View>
 
@@ -176,61 +201,93 @@ export default function FitnessScreen() {
           entering={FadeInDown.duration(Motion.durationRise).delay(40)}
           style={styles.statRow}
         >
-          <View style={[styles.card, styles.statCard]}>
+          <View style={[styles.card, styles.statCard, cardStyle]}>
             <SectionHead Icon={Dumbbell} label="WORKOUTS" />
-            <Text style={styles.heroLg}>{data.workouts.count}</Text>
-            <Text style={styles.heroCaption}>this month</Text>
-            <View style={styles.statFooter}>
+            <Text style={[styles.heroLg, { color: t.primary }]}>
+              {data.workouts.count}
+            </Text>
+            <Text style={[styles.heroCaption, { color: t.textSecondary }]}>
+              this month
+            </Text>
+            <View
+              style={[
+                styles.statFooter,
+                { borderTopColor: t.borderDefault },
+              ]}
+            >
               {data.workouts.deltaPct != null ? (
                 <>
                   {data.workouts.deltaPct >= 0 ? (
-                    <TrendingUp size={10} color={DS.accent} strokeWidth={2} />
+                    <TrendingUp size={10} color={t.primary} strokeWidth={2} />
                   ) : (
-                    <TrendingDown size={10} color="#E5736A" strokeWidth={2} />
+                    <TrendingDown size={10} color={DESTRUCTIVE} strokeWidth={2} />
                   )}
                   <Text
                     style={[
                       styles.deltaText,
-                      data.workouts.deltaPct < 0 && { color: '#E5736A' },
+                      {
+                        color:
+                          data.workouts.deltaPct < 0 ? DESTRUCTIVE : t.primary,
+                      },
                     ]}
                   >
                     {data.workouts.deltaPct >= 0 ? '+' : ''}
                     {data.workouts.deltaPct}%
                   </Text>
-                  <Text style={styles.deltaMeta}>vs prev</Text>
+                  <Text style={[styles.deltaMeta, { color: t.textTertiary }]}>
+                    vs prev
+                  </Text>
                 </>
               ) : (
-                <Text style={styles.deltaMeta}>Building data…</Text>
+                <Text style={[styles.deltaMeta, { color: t.textTertiary }]}>
+                  Building data…
+                </Text>
               )}
             </View>
           </View>
 
-          <View style={[styles.card, styles.statCard]}>
+          <View style={[styles.card, styles.statCard, cardStyle]}>
             <SectionHead Icon={Heart} label="AVG HR" />
             <View style={styles.heroRow}>
-              <Text style={styles.heroLg}>
+              <Text style={[styles.heroLg, { color: t.primary }]}>
                 {data.heartRate.avg > 0 ? data.heartRate.avg : '—'}
               </Text>
-              <Text style={styles.heroUnit}>bpm</Text>
+              <Text style={[styles.heroUnit, { color: t.textTertiary }]}>
+                bpm
+              </Text>
             </View>
-            <Text style={styles.heroCaption}>during workouts</Text>
-            <View style={styles.statFooter}>
-              <Text style={styles.deltaMeta}>Resting</Text>
-              <Text style={styles.deltaWhite}>
+            <Text style={[styles.heroCaption, { color: t.textSecondary }]}>
+              during workouts
+            </Text>
+            <View
+              style={[
+                styles.statFooter,
+                { borderTopColor: t.borderDefault },
+              ]}
+            >
+              <Text style={[styles.deltaMeta, { color: t.textTertiary }]}>
+                Resting
+              </Text>
+              <Text style={[styles.deltaWhite, { color: t.textPrimary }]}>
                 {data.heartRate.resting > 0 ? data.heartRate.resting : '—'}
               </Text>
               {data.heartRate.restingDelta !== 0 ? (
                 <>
                   <View style={{ flex: 1 }} />
                   {data.heartRate.restingDelta < 0 ? (
-                    <TrendingDown size={10} color={DS.accent} strokeWidth={2} />
+                    <TrendingDown size={10} color={t.primary} strokeWidth={2} />
                   ) : (
-                    <TrendingUp size={10} color="#E5736A" strokeWidth={2} />
+                    <TrendingUp size={10} color={DESTRUCTIVE} strokeWidth={2} />
                   )}
                   <Text
                     style={[
                       styles.deltaText,
-                      data.heartRate.restingDelta > 0 && { color: '#E5736A' },
+                      {
+                        color:
+                          data.heartRate.restingDelta > 0
+                            ? DESTRUCTIVE
+                            : t.primary,
+                      },
                     ]}
                   >
                     {data.heartRate.restingDelta}
@@ -244,21 +301,33 @@ export default function FitnessScreen() {
         {/* Total time */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(80)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.totalTimeRow}>
-            <View style={styles.iconBoxLarge}>
-              <Clock size={16} color={DS.accent} strokeWidth={2.5} />
+            <View
+              style={[
+                styles.iconBoxLarge,
+                {
+                  backgroundColor: t.primaryTintBg,
+                  borderColor: t.primaryTintBorder,
+                },
+              ]}
+            >
+              <Clock size={16} color={t.primary} strokeWidth={2.5} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.sectionLabel}>TOTAL TIME</Text>
-              <Text style={[styles.heroMd, Tabular]}>
+              <Text style={[styles.sectionLabel, { color: t.primary }]}>
+                TOTAL TIME
+              </Text>
+              <Text style={[styles.heroMd, { color: t.primary }, Tabular]}>
                 {fmtHms(data.totalTime.seconds)}
               </Text>
             </View>
             <View style={styles.totalTimeRight}>
-              <Text style={styles.sectionLabelMuted}>AVG</Text>
-              <Text style={[styles.avgValue, Tabular]}>
+              <Text style={[styles.sectionLabelMuted, { color: t.textTertiary }]}>
+                AVG
+              </Text>
+              <Text style={[styles.avgValue, { color: t.textPrimary }, Tabular]}>
                 {data.totalTime.avgSeconds > 0
                   ? fmtMinShort(data.totalTime.avgSeconds)
                   : '—'}
@@ -270,30 +339,42 @@ export default function FitnessScreen() {
         {/* Calories Active / Total */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(120)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Flame} label="CALORIES" />
-            <Text style={styles.cardHeaderMeta}>Apple Health</Text>
+            <Text style={[styles.cardHeaderMeta, { color: t.textTertiary }]}>
+              Apple Health
+            </Text>
           </View>
           <View style={styles.calRow}>
             <View style={styles.calCol}>
-              <Text style={styles.sectionLabelMuted}>ACTIVE</Text>
+              <Text style={[styles.sectionLabelMuted, { color: t.textTertiary }]}>
+                ACTIVE
+              </Text>
               <View style={styles.heroRow}>
-                <Text style={[styles.heroSm, { color: DS.accent }]}>
+                <Text style={[styles.heroSm, { color: t.primary }]}>
                   {data.calories.active.toLocaleString()}
                 </Text>
-                <Text style={styles.heroUnitSm}>CAL</Text>
+                <Text style={[styles.heroUnitSm, { color: t.textTertiary }]}>
+                  CAL
+                </Text>
               </View>
             </View>
-            <View style={styles.calDivider} />
+            <View
+              style={[styles.calDivider, { backgroundColor: t.borderDefault }]}
+            />
             <View style={styles.calCol}>
-              <Text style={styles.sectionLabelMuted}>TOTAL</Text>
+              <Text style={[styles.sectionLabelMuted, { color: t.textTertiary }]}>
+                TOTAL
+              </Text>
               <View style={styles.heroRow}>
-                <Text style={[styles.heroSm, { color: DS.text }]}>
+                <Text style={[styles.heroSm, { color: t.textPrimary }]}>
                   {data.calories.total.toLocaleString()}
                 </Text>
-                <Text style={styles.heroUnitSm}>CAL</Text>
+                <Text style={[styles.heroUnitSm, { color: t.textTertiary }]}>
+                  CAL
+                </Text>
               </View>
             </View>
           </View>
@@ -302,7 +383,7 @@ export default function FitnessScreen() {
         {/* Daily burn */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(160)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Zap} label="DAILY BURN" />
@@ -314,32 +395,40 @@ export default function FitnessScreen() {
             resetKey={data.dailyBurn.range}
           />
 
-          <View style={styles.cardFooter}>
+          <View style={[styles.cardFooter, { borderTopColor: t.borderDefault }]}>
             <View style={styles.legendRow}>
               <View style={styles.legendItem}>
                 <View
                   style={[
                     styles.legendSwatch,
-                    { backgroundColor: 'rgba(16, 185, 129, 0.7)' },
+                    { backgroundColor: alphaize(t.primary, 0.7) },
                   ]}
                 />
-                <Text style={styles.legendLabel}>Workout</Text>
+                <Text style={[styles.legendLabel, { color: t.textSecondary }]}>
+                  Workout
+                </Text>
               </View>
               <View style={styles.legendItem}>
                 <View
                   style={[
                     styles.legendSwatch,
-                    { backgroundColor: 'rgba(16, 185, 129, 0.2)' },
+                    { backgroundColor: alphaize(t.primary, 0.2) },
                   ]}
                 />
-                <Text style={styles.legendLabel}>Rest</Text>
+                <Text style={[styles.legendLabel, { color: t.textSecondary }]}>
+                  Rest
+                </Text>
               </View>
             </View>
             <View style={styles.legendAvg}>
-              <Text style={[styles.legendAvgValue, Tabular]}>
+              <Text
+                style={[styles.legendAvgValue, { color: t.textPrimary }, Tabular]}
+              >
                 {dailyAvg.toLocaleString()}
               </Text>
-              <Text style={styles.legendAvgLabel}>cal/day avg</Text>
+              <Text style={[styles.legendAvgLabel, { color: t.textTertiary }]}>
+                cal/day avg
+              </Text>
             </View>
           </View>
         </Animated.View>
@@ -347,65 +436,94 @@ export default function FitnessScreen() {
         {/* HR range */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(200)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Heart} label="HEART RATE RANGE" />
-            <Text style={styles.cardHeaderMeta}>Apple Watch</Text>
+            <Text style={[styles.cardHeaderMeta, { color: t.textTertiary }]}>
+              Apple Watch
+            </Text>
           </View>
 
           <View style={styles.hrTriRow}>
-            <HRTri label="MIN" value={data.heartRate.min} color="#6EE7B7" />
-            <View style={styles.hrTriDivider} />
+            <HRTri label="MIN" value={data.heartRate.min} color={t.macroCarbs} />
+            <View
+              style={[styles.hrTriDivider, { backgroundColor: t.borderDefault }]}
+            />
             <HRTri
               label="AVG"
               value={data.heartRate.avg}
-              color={DS.accent}
+              color={t.primary}
               glow
             />
-            <View style={styles.hrTriDivider} />
-            <HRTri label="MAX" value={data.heartRate.max} color={DS.text} />
+            <View
+              style={[styles.hrTriDivider, { backgroundColor: t.borderDefault }]}
+            />
+            <HRTri label="MAX" value={data.heartRate.max} color={t.textPrimary} />
           </View>
 
-          {/* Gradient zone bar */}
+          {/* Gradient zone bar — light → mid → primary → darker → darkest.
+              Emerald keeps its hand-tuned dark green tail; Sakura uses
+              progressively darker rose hues ending in the burgundy depth
+              color so the right side still reads as "high intensity". */}
           <View style={styles.zoneBarWrap}>
             <LinearGradient
-              colors={['#34D399', '#6EE7B7', DS.accent, '#059669', '#047857']}
+              colors={
+                isSakura
+                  ? [
+                      t.macroFat,
+                      t.macroCarbs,
+                      t.primary,
+                      '#A8567B',
+                      SAKURA_BURGUNDY,
+                    ]
+                  : ['#34D399', '#6EE7B7', t.primary, '#059669', '#047857']
+              }
               start={{ x: 0, y: 0.5 }}
               end={{ x: 1, y: 0.5 }}
               style={styles.zoneBar}
             />
             <Dot
               left={pctFromBpm(data.heartRate.min, data.heartRate)}
-              outline="#6EE7B7"
+              outline={t.macroCarbs}
               size={6}
             />
             <Dot
               left={pctFromBpm(data.heartRate.avg, data.heartRate)}
               outline="#fff"
-              fill={DS.accent}
+              fill={t.primary}
               size={8}
             />
             <Dot
               left={pctFromBpm(data.heartRate.max, data.heartRate)}
-              outline="#047857"
+              outline={isSakura ? SAKURA_BURGUNDY : '#047857'}
               size={6}
             />
           </View>
           <View style={styles.zoneAxis}>
-            <Text style={styles.axisTiny}>{data.heartRate.rangeFloor}</Text>
-            <Text style={styles.axisTiny}>{data.heartRate.rangeCeil}</Text>
+            <Text style={[styles.axisTiny, { color: t.textQuaternary }]}>
+              {data.heartRate.rangeFloor}
+            </Text>
+            <Text style={[styles.axisTiny, { color: t.textQuaternary }]}>
+              {data.heartRate.rangeCeil}
+            </Text>
           </View>
         </Animated.View>
 
         {/* HR zones */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(240)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Activity} label="HR ZONES" />
-            <Text style={[styles.cardHeaderMeta, Tabular, { color: DS.text }]}>
+            <Text
+              style={[
+                styles.cardHeaderMeta,
+                Tabular,
+                { color: t.textPrimary },
+              ]}
+            >
               {fmtHms(data.totalTime.seconds)}
             </Text>
           </View>
@@ -418,13 +536,13 @@ export default function FitnessScreen() {
         {/* Consistency */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(280)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Target} label="CONSISTENCY" />
             <View style={styles.streakBadge}>
-              <Award size={11} color={DS.accent} strokeWidth={2} />
-              <Text style={[styles.streakText, Tabular]}>
+              <Award size={11} color={t.primary} strokeWidth={2} />
+              <Text style={[styles.streakText, { color: t.primary }, Tabular]}>
                 {data.consistency.streak} day streak
               </Text>
             </View>
@@ -432,9 +550,16 @@ export default function FitnessScreen() {
 
           <ConsistencyHeatmap weeks={data.consistency.heatmap} />
 
-          <View style={styles.consistencyFooter}>
+          <View
+            style={[
+              styles.consistencyFooter,
+              { borderTopColor: t.borderDefault },
+            ]}
+          >
             <View style={styles.legendRow}>
-              <Text style={styles.legendLabel}>Less</Text>
+              <Text style={[styles.legendLabel, { color: t.textSecondary }]}>
+                Less
+              </Text>
               {[0, 1, 2, 3, 4].map((i) => (
                 <View
                   key={i}
@@ -443,19 +568,25 @@ export default function FitnessScreen() {
                     {
                       backgroundColor:
                         i === 0
-                          ? '#0F0F0F'
-                          : `rgba(16, 185, 129, ${0.2 + i * 0.2})`,
+                          ? t.activityEmpty
+                          : alphaize(t.primary, 0.2 + i * 0.2),
                     },
                   ]}
                 />
               ))}
-              <Text style={styles.legendLabel}>More</Text>
+              <Text style={[styles.legendLabel, { color: t.textSecondary }]}>
+                More
+              </Text>
             </View>
             <View style={styles.activeDaysRow}>
-              <Text style={[styles.activeDaysValue, Tabular]}>
+              <Text
+                style={[styles.activeDaysValue, { color: t.textPrimary }, Tabular]}
+              >
                 {data.consistency.activeDays}
               </Text>
-              <Text style={styles.activeDaysLabel}>active days</Text>
+              <Text style={[styles.activeDaysLabel, { color: t.textTertiary }]}>
+                active days
+              </Text>
             </View>
           </View>
         </Animated.View>
@@ -463,24 +594,33 @@ export default function FitnessScreen() {
         {/* Muscle split */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(320)}
-          style={styles.card}
+          style={[styles.card, cardStyle]}
         >
           <View style={styles.cardHeaderRow}>
             <SectionHead Icon={Dumbbell} label="MUSCLE SPLIT" />
-            <Text style={styles.cardHeaderMeta}>by volume</Text>
+            <Text style={[styles.cardHeaderMeta, { color: t.textTertiary }]}>
+              by volume
+            </Text>
           </View>
 
           {data.muscleSplit.length === 0 ? (
-            <Text style={styles.emptyMuscle}>
+            <Text style={[styles.emptyMuscle, { color: t.textTertiary }]}>
               Log a workout this month to see volume by muscle group.
             </Text>
           ) : (
             data.muscleSplit.map((m) => (
               <View key={m.name} style={styles.muscleRow}>
-                <Text style={styles.muscleName}>{m.name}</Text>
-                <View style={styles.muscleTrack}>
+                <Text style={[styles.muscleName, { color: t.textPrimary }]}>
+                  {m.name}
+                </Text>
+                <View
+                  style={[
+                    styles.muscleTrack,
+                    { backgroundColor: t.bgCardElevated },
+                  ]}
+                >
                   <LinearGradient
-                    colors={['rgba(16, 185, 129, 0.4)', DS.accent]}
+                    colors={[alphaize(t.primary, 0.4), t.primary]}
                     start={{ x: 0, y: 0.5 }}
                     end={{ x: 1, y: 0.5 }}
                     style={[
@@ -490,12 +630,16 @@ export default function FitnessScreen() {
                   />
                 </View>
                 <View style={styles.muscleValueWrap}>
-                  <Text style={[styles.muscleValue, Tabular]}>
+                  <Text
+                    style={[styles.muscleValue, { color: t.textPrimary }, Tabular]}
+                  >
                     {m.volume >= 1000
                       ? `${(m.volume / 1000).toFixed(1)}k`
                       : Math.round(m.volume)}
                   </Text>
-                  <Text style={styles.muscleUnit}>lb</Text>
+                  <Text style={[styles.muscleUnit, { color: t.textTertiary }]}>
+                    lb
+                  </Text>
                 </View>
               </View>
             ))
@@ -505,14 +649,22 @@ export default function FitnessScreen() {
         {/* HealthKit status */}
         <Animated.View
           entering={FadeInDown.duration(Motion.durationRise).delay(360)}
-          style={[styles.card, styles.statusCard]}
+          style={[styles.card, styles.statusCard, cardStyle]}
           accessibilityLiveRegion="polite"
         >
-          <View style={styles.statusIcon}>
-            <Heart size={12} color={DS.accent} strokeWidth={2.5} />
+          <View
+            style={[
+              styles.statusIcon,
+              {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryTintBorder,
+              },
+            ]}
+          >
+            <Heart size={12} color={t.primary} strokeWidth={2.5} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.statusTitle}>
+            <Text style={[styles.statusTitle, { color: t.textPrimary }]}>
               {data.status === 'connected'
                 ? 'Apple Health connected'
                 : data.status === 'partial'
@@ -523,15 +675,15 @@ export default function FitnessScreen() {
                       ? 'Apple Health not available'
                       : 'Apple Health not connected'}
             </Text>
-            <Text style={styles.statusMeta}>
+            <Text style={[styles.statusMeta, { color: t.textTertiary }]}>
               Heart rate · Calories · Workouts
             </Text>
           </View>
           <Text
             style={[
               styles.statusBadge,
-              data.status !== 'connected' && {
-                color: DS.textTertiary,
+              {
+                color: data.status === 'connected' ? t.primary : t.textTertiary,
               },
             ]}
           >
@@ -554,12 +706,21 @@ export default function FitnessScreen() {
 // --------------------------------------------------------------------------
 
 function SectionHead({ Icon, label }: { Icon: LucideIcon; label: string }) {
+  const t = useTokens();
   return (
     <View style={styles.sectionHead}>
-      <View style={styles.iconBox}>
-        <Icon size={10} color={DS.accent} strokeWidth={2.5} />
+      <View
+        style={[
+          styles.iconBox,
+          {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+      >
+        <Icon size={10} color={t.primary} strokeWidth={2.5} />
       </View>
-      <Text style={styles.sectionLabel}>{label}</Text>
+      <Text style={[styles.sectionLabel, { color: t.primary }]}>{label}</Text>
     </View>
   );
 }
@@ -571,8 +732,17 @@ function RangeToggle({
   value: BurnRange;
   onChange: (r: BurnRange) => void;
 }) {
+  const t = useTokens();
   return (
-    <View style={styles.rangeWrap}>
+    <View
+      style={[
+        styles.rangeWrap,
+        {
+          backgroundColor: t.bgCardElevated,
+          borderColor: t.borderDefault,
+        },
+      ]}
+    >
       {(['7d', '14d', '30d'] as BurnRange[]).map((r) => {
         const active = r === value;
         return (
@@ -581,7 +751,7 @@ function RangeToggle({
             onPress={() => onChange(r)}
             style={[
               styles.rangeSeg,
-              active && styles.rangeSegActive,
+              active && { backgroundColor: t.primary },
             ]}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
@@ -590,7 +760,7 @@ function RangeToggle({
             <Text
               style={[
                 styles.rangeSegLabel,
-                active && styles.rangeSegLabelActive,
+                { color: active ? t.textOnPrimary : t.textTertiary },
               ]}
             >
               {r}
@@ -613,14 +783,25 @@ function HRTri({
   color: string;
   glow?: boolean;
 }) {
+  const t = useTokens();
+  // Derive the glow halo color from the tri's primary color so it
+  // tracks the theme — emerald glow in Emerald, rose glow in Sakura.
+  const glowStyle = glow
+    ? {
+        textShadowColor: alphaize(color, 0.45),
+        textShadowRadius: 12,
+      }
+    : null;
   return (
     <View style={styles.hrTriCol}>
-      <Text style={styles.sectionLabelMuted}>{label}</Text>
+      <Text style={[styles.sectionLabelMuted, { color: t.textTertiary }]}>
+        {label}
+      </Text>
       <View style={styles.heroRow}>
-        <Text style={[styles.heroXs, { color }, glow && styles.glow]}>
+        <Text style={[styles.heroXs, { color }, glowStyle]}>
           {value > 0 ? value : '—'}
         </Text>
-        <Text style={styles.heroUnitSm}>BPM</Text>
+        <Text style={[styles.heroUnitSm, { color: t.textTertiary }]}>BPM</Text>
       </View>
     </View>
   );
@@ -664,23 +845,47 @@ function Dot({
 }
 
 function ZoneRow({ zone, index }: { zone: HRZoneBucket; index: number }) {
+  const t = useTokens();
+  const { appearanceTheme } = useTheme();
+  const isSakura = appearanceTheme === 'sakura';
+  // Five-zone intensity ramp. Index 0–2 use alphaized primary (so they
+  // swap emerald → rose cleanly); index 3–4 need progressively darker
+  // shades, which emerald and sakura express differently — emerald uses
+  // its hand-tuned dark green stops, sakura ramps through deep rose into
+  // burgundy.
   const fillColor =
     index === 0
-      ? 'rgba(16, 185, 129, 0.4)'
+      ? alphaize(t.primary, 0.4)
       : index === 1
-        ? 'rgba(16, 185, 129, 0.6)'
+        ? alphaize(t.primary, 0.6)
         : index === 2
-          ? DS.accent
+          ? t.primary
           : index === 3
-            ? '#059669'
-            : '#047857';
+            ? isSakura
+              ? '#A8567B'
+              : '#059669'
+            : isSakura
+              ? SAKURA_BURGUNDY
+              : '#047857';
   return (
     <View style={styles.zoneRow}>
       <View style={styles.zoneLeft}>
-        <Text style={styles.zoneName}>{zone.name}</Text>
-        <Text style={styles.zoneLabel}>{zone.label}</Text>
+        <Text style={[styles.zoneName, { color: t.textPrimary }]}>
+          {zone.name}
+        </Text>
+        <Text style={[styles.zoneLabel, { color: t.textTertiary }]}>
+          {zone.label}
+        </Text>
       </View>
-      <View style={styles.zoneTrack}>
+      <View
+        style={[
+          styles.zoneTrack,
+          {
+            backgroundColor: t.bgCardElevated,
+            borderColor: t.borderDefault,
+          },
+        ]}
+      >
         <View
           style={[
             styles.zoneFill,
@@ -688,11 +893,13 @@ function ZoneRow({ zone, index }: { zone: HRZoneBucket; index: number }) {
           ]}
         >
           {zone.pct > 18 ? (
-            <Text style={[styles.zonePct, Tabular]}>{zone.pct}%</Text>
+            <Text style={[styles.zonePct, { color: t.textOnPrimary }, Tabular]}>
+              {zone.pct}%
+            </Text>
           ) : null}
         </View>
       </View>
-      <Text style={[styles.zoneTime, Tabular]}>
+      <Text style={[styles.zoneTime, { color: t.textPrimary }, Tabular]}>
         {fmtZoneTime(zone.seconds)}
       </Text>
     </View>
@@ -706,15 +913,33 @@ function ConnectHealthCard({
   denied: boolean;
   onConnect: () => void | Promise<void>;
 }) {
+  const t = useTokens();
   return (
-    <View style={[styles.card, styles.connectCard]}>
-      <View style={styles.connectIcon}>
-        <Heart size={20} color={DS.accent} strokeWidth={2} />
+    <View
+      style={[
+        styles.card,
+        styles.connectCard,
+        {
+          backgroundColor: t.bgCard,
+          borderColor: t.borderDefault,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.connectIcon,
+          {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+      >
+        <Heart size={20} color={t.primary} strokeWidth={2} />
       </View>
-      <Text style={styles.connectTitle}>
+      <Text style={[styles.connectTitle, { color: t.textPrimary }]}>
         {denied ? 'Reconnect Apple Health' : 'Connect Apple Health'}
       </Text>
-      <Text style={styles.connectBody}>
+      <Text style={[styles.connectBody, { color: t.textSecondary }]}>
         {denied
           ? 'You denied access earlier. Re-enable it from iPhone Settings → Health → Data Access & Devices → MacroVault.'
           : 'See your heart rate, calorie burn, and Apple Watch workouts in MacroVault. Your data stays private.'}
@@ -723,12 +948,13 @@ function ConnectHealthCard({
         onPress={() => void onConnect()}
         style={({ pressed }) => [
           styles.connectBtn,
+          { backgroundColor: t.primary },
           pressed && styles.connectBtnPressed,
         ]}
         accessibilityRole="button"
         accessibilityLabel={denied ? 'Reconnect' : 'Connect Apple Health'}
       >
-        <Text style={styles.connectBtnText}>
+        <Text style={[styles.connectBtnText, { color: t.textOnPrimary }]}>
           {denied ? 'Reconnect' : 'Continue'}
         </Text>
       </Pressable>
@@ -737,13 +963,33 @@ function ConnectHealthCard({
 }
 
 function UnavailableCard() {
+  const t = useTokens();
   return (
-    <View style={[styles.card, styles.connectCard]}>
-      <View style={styles.connectIcon}>
-        <Heart size={20} color={DS.textTertiary} strokeWidth={2} />
+    <View
+      style={[
+        styles.card,
+        styles.connectCard,
+        {
+          backgroundColor: t.bgCard,
+          borderColor: t.borderDefault,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.connectIcon,
+          {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+      >
+        <Heart size={20} color={t.textTertiary} strokeWidth={2} />
       </View>
-      <Text style={styles.connectTitle}>Apple Health not available</Text>
-      <Text style={styles.connectBody}>
+      <Text style={[styles.connectTitle, { color: t.textPrimary }]}>
+        Apple Health not available
+      </Text>
+      <Text style={[styles.connectBody, { color: t.textSecondary }]}>
         HealthKit only runs on iPhones. Workout, volume, and consistency cards
         still work from your MacroVault data.
       </Text>
@@ -756,14 +1002,7 @@ function UnavailableCard() {
 // --------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: DS.bg },
-  topSpine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-  },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -775,16 +1014,13 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
   headerTitle: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   scrollContent: {
@@ -804,9 +1040,7 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -815,20 +1049,16 @@ const styles = StyleSheet.create({
   monthCaption: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
     letterSpacing: 1.5,
   },
   monthTitle: {
     fontFamily: Font.bold,
     fontSize: 15,
-    color: DS.text,
     letterSpacing: -0.2,
     marginTop: 2,
   },
   // Cards
   card: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
@@ -842,7 +1072,6 @@ const styles = StyleSheet.create({
   cardHeaderMeta: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: DS.textTertiary,
   },
   cardFooter: {
     flexDirection: 'row',
@@ -851,7 +1080,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 10,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
   },
   // Section head
   sectionHead: {
@@ -863,9 +1091,7 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 6,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -873,22 +1099,18 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   sectionLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.accent,
     letterSpacing: 1,
   },
   sectionLabelMuted: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 1,
   },
   // Stat row
@@ -897,7 +1119,6 @@ const styles = StyleSheet.create({
   heroLg: {
     fontFamily: Font.extrabold,
     fontSize: 40,
-    color: DS.accent,
     letterSpacing: -1.5,
     fontVariant: ['tabular-nums'],
     lineHeight: 42,
@@ -906,7 +1127,6 @@ const styles = StyleSheet.create({
   heroMd: {
     fontFamily: Font.extrabold,
     fontSize: 26,
-    color: DS.accent,
     letterSpacing: -0.8,
     lineHeight: 28,
     marginTop: 2,
@@ -923,14 +1143,11 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
     fontVariant: ['tabular-nums'],
   },
-  glow: {
-    textShadowColor: 'rgba(16, 185, 129, 0.45)',
-    textShadowRadius: 12,
-  },
+  // glow style moved inline into HRTri so the halo color is derived from
+  // the active token (rose in Sakura, emerald otherwise) via alphaize().
   heroCaption: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textSecondary,
     marginTop: 4,
   },
   heroRow: {
@@ -942,12 +1159,10 @@ const styles = StyleSheet.create({
   heroUnit: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   heroUnitSm: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.4,
   },
   statFooter: {
@@ -957,23 +1172,19 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
   },
   deltaText: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.accent,
     fontVariant: ['tabular-nums'],
   },
   deltaMeta: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: DS.textTertiary,
   },
   deltaWhite: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.text,
     fontVariant: ['tabular-nums'],
   },
   // Total time
@@ -986,7 +1197,6 @@ const styles = StyleSheet.create({
   avgValue: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
     marginTop: 2,
   },
   // Calories
@@ -994,15 +1204,12 @@ const styles = StyleSheet.create({
   calCol: { flex: 1, paddingHorizontal: 4 },
   calDivider: {
     width: 1,
-    backgroundColor: DS.border,
     marginHorizontal: 6,
   },
   // Range toggle
   rangeWrap: {
     flexDirection: 'row',
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: 8,
     padding: 2,
   },
@@ -1011,17 +1218,10 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 6,
   },
-  rangeSegActive: {
-    backgroundColor: DS.accent,
-  },
   rangeSegLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.3,
-  },
-  rangeSegLabelActive: {
-    color: '#000',
   },
   // Daily-burn legend
   legendRow: {
@@ -1042,7 +1242,6 @@ const styles = StyleSheet.create({
   legendLabel: {
     fontFamily: Font.semibold,
     fontSize: 9,
-    color: DS.textSecondary,
   },
   legendAvg: {
     flexDirection: 'row',
@@ -1052,12 +1251,10 @@ const styles = StyleSheet.create({
   legendAvgValue: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   legendAvgLabel: {
     fontFamily: Font.semibold,
     fontSize: 9,
-    color: DS.textTertiary,
   },
   // HR range
   hrTriRow: {
@@ -1067,7 +1264,6 @@ const styles = StyleSheet.create({
   hrTriCol: { flex: 1, alignItems: 'center', gap: 4 },
   hrTriDivider: {
     width: 1,
-    backgroundColor: DS.border,
   },
   zoneBarWrap: {
     position: 'relative',
@@ -1085,7 +1281,6 @@ const styles = StyleSheet.create({
   axisTiny: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: DS.textQuaternary,
     fontVariant: ['tabular-nums'],
   },
   // HR zones
@@ -1099,19 +1294,15 @@ const styles = StyleSheet.create({
   zoneName: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.text,
   },
   zoneLabel: {
     fontFamily: Font.medium,
     fontSize: 8,
-    color: DS.textTertiary,
   },
   zoneTrack: {
     flex: 1,
     height: 16,
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: 4,
     overflow: 'hidden',
   },
@@ -1125,12 +1316,10 @@ const styles = StyleSheet.create({
   zonePct: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: '#000',
   },
   zoneTime: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.text,
     width: 60,
     textAlign: 'right',
   },
@@ -1143,7 +1332,6 @@ const styles = StyleSheet.create({
   streakText: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
   },
   consistencyFooter: {
     flexDirection: 'row',
@@ -1152,7 +1340,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
   },
   miniSwatch: {
     width: 8,
@@ -1167,12 +1354,10 @@ const styles = StyleSheet.create({
   activeDaysValue: {
     fontFamily: Font.bold,
     fontSize: 12,
-    color: DS.text,
   },
   activeDaysLabel: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: DS.textTertiary,
   },
   // Muscle split
   muscleRow: {
@@ -1185,12 +1370,10 @@ const styles = StyleSheet.create({
     width: 64,
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.text,
   },
   muscleTrack: {
     flex: 1,
     height: 12,
-    backgroundColor: DS.surfaceFlat,
     borderRadius: 3,
     overflow: 'hidden',
   },
@@ -1205,17 +1388,14 @@ const styles = StyleSheet.create({
   muscleValue: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.text,
   },
   muscleUnit: {
     fontFamily: Font.medium,
     fontSize: 8,
-    color: DS.textTertiary,
   },
   emptyMuscle: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     paddingVertical: 8,
   },
@@ -1230,27 +1410,22 @@ const styles = StyleSheet.create({
     width: 28,
     height: 28,
     borderRadius: 8,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   statusTitle: {
     fontFamily: Font.bold,
     fontSize: 11,
-    color: DS.text,
   },
   statusMeta: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: DS.textTertiary,
     marginTop: 1,
   },
   statusBadge: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.accent,
   },
   // Connect card
   connectCard: {
@@ -1262,22 +1437,18 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 12,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
   connectTitle: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
     marginTop: 2,
   },
   connectBody: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textSecondary,
     textAlign: 'center',
     lineHeight: 17,
     paddingHorizontal: 4,
@@ -1287,13 +1458,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 24,
     borderRadius: 10,
-    backgroundColor: DS.accent,
   },
   connectBtnPressed: { opacity: 0.85 },
   connectBtnText: {
     fontFamily: Font.bold,
     fontSize: 12,
-    color: '#000',
   },
   bottomSpacer: { height: 140 },
 });

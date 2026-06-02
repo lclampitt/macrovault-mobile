@@ -8,7 +8,8 @@ import {
   View,
 } from 'react-native';
 import { X } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   visible: boolean;
@@ -37,6 +38,7 @@ export default function RestTimerEditModal({
   onCancel,
   onSave,
 }: Props) {
+  const t = useTokens();
   const [selected, setSelected] = useState<number>(currentSeconds);
   const [custom, setCustom] = useState('');
 
@@ -60,22 +62,34 @@ export default function RestTimerEditModal({
       animationType="fade"
       onRequestClose={onCancel}
     >
-      <Pressable style={styles.backdrop} onPress={onCancel}>
-        <Pressable style={styles.modal} onPress={(e) => e.stopPropagation()}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: t.bgOverlay }]}
+        onPress={onCancel}
+      >
+        <Pressable
+          style={[
+            styles.modal,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          ]}
+          onPress={(e) => e.stopPropagation()}
+        >
           <View style={styles.header}>
-            <Text style={styles.title}>Rest length</Text>
+            <Text style={[styles.title, { color: t.textPrimary }]}>Rest length</Text>
             <Pressable
               onPress={onCancel}
               hitSlop={6}
-              style={styles.closeBtn}
+              style={[
+                styles.closeBtn,
+                { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <X size={12} color={DS.textSecondary} strokeWidth={2} />
+              <X size={12} color={t.textSecondary} strokeWidth={2} />
             </Pressable>
           </View>
 
-          <Text style={styles.subLabel}>QUICK PICK</Text>
+          <Text style={[styles.subLabel, { color: t.textTertiary }]}>QUICK PICK</Text>
           <View style={styles.chipsWrap}>
             {PRESETS.map((p) => {
               const active = selected === p.value && !custom.trim();
@@ -86,7 +100,11 @@ export default function RestTimerEditModal({
                     setSelected(p.value);
                     setCustom('');
                   }}
-                  style={[styles.chip, active && styles.chipActive]}
+                  style={[
+                    styles.chip,
+                    { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                    active && { backgroundColor: t.primary, borderColor: t.primary },
+                  ]}
                   accessibilityRole="button"
                   accessibilityState={{ selected: active }}
                   accessibilityLabel={p.label}
@@ -94,7 +112,7 @@ export default function RestTimerEditModal({
                   <Text
                     style={[
                       styles.chipText,
-                      active && styles.chipTextActive,
+                      { color: active ? t.textOnPrimary : t.textSecondary },
                       Tabular,
                     ]}
                   >
@@ -105,20 +123,25 @@ export default function RestTimerEditModal({
             })}
           </View>
 
-          <Text style={styles.subLabel}>CUSTOM</Text>
-          <View style={styles.customRow}>
+          <Text style={[styles.subLabel, { color: t.textTertiary }]}>CUSTOM</Text>
+          <View
+            style={[
+              styles.customRow,
+              { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+            ]}
+          >
             <TextInput
               value={custom}
               onChangeText={setCustom}
               placeholder="e.g. 75"
-              placeholderTextColor={DS.textQuaternary}
+              placeholderTextColor={t.textQuaternary}
               keyboardType="number-pad"
               inputMode="numeric"
-              style={styles.customInput}
+              style={[styles.customInput, { color: t.textPrimary }]}
               maxLength={4}
               accessibilityLabel="Custom rest in seconds"
             />
-            <Text style={styles.customUnit}>sec</Text>
+            <Text style={[styles.customUnit, { color: t.textTertiary }]}>sec</Text>
           </View>
 
           <View style={styles.actions}>
@@ -126,23 +149,25 @@ export default function RestTimerEditModal({
               onPress={onCancel}
               style={({ pressed }) => [
                 styles.cancelBtn,
+                { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
                 pressed && styles.pressed,
               ]}
               accessibilityRole="button"
               accessibilityLabel="Cancel"
             >
-              <Text style={styles.cancelText}>Cancel</Text>
+              <Text style={[styles.cancelText, { color: t.textSecondary }]}>Cancel</Text>
             </Pressable>
             <Pressable
               onPress={handleSave}
               style={({ pressed }) => [
                 styles.saveBtn,
+                { backgroundColor: t.primary },
                 pressed && styles.pressed,
               ]}
               accessibilityRole="button"
               accessibilityLabel="Save rest time"
             >
-              <Text style={styles.saveText}>Set timer</Text>
+              <Text style={[styles.saveText, { color: t.textOnPrimary }]}>Set timer</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -154,7 +179,6 @@ export default function RestTimerEditModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -162,8 +186,6 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 18,
@@ -177,14 +199,11 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
   },
   closeBtn: {
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -192,7 +211,6 @@ const styles = StyleSheet.create({
   subLabel: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
     marginTop: 6,
     marginBottom: 8,
@@ -206,30 +224,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     minWidth: 52,
     alignItems: 'center',
   },
-  chipActive: {
-    backgroundColor: DS.accent,
-    borderColor: DS.accent,
-  },
   chipText: {
     fontFamily: Font.bold,
     fontSize: 12,
-    color: DS.textSecondary,
-  },
-  chipTextActive: {
-    color: '#000',
   },
   customRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -240,14 +246,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
     padding: 0,
     fontVariant: ['tabular-nums'],
   },
   customUnit: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
   },
   actions: {
     flexDirection: 'row',
@@ -257,27 +261,22 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 11,
     borderRadius: 10,
-    backgroundColor: DS.surfaceFlat,
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
   },
   cancelText: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.textSecondary,
   },
   saveBtn: {
     flex: 1.4,
     paddingVertical: 11,
     borderRadius: 10,
-    backgroundColor: DS.accent,
     alignItems: 'center',
   },
   saveText: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: '#000',
   },
   pressed: {
     opacity: 0.85,

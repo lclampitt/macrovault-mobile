@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import Card from '../ds/Card';
 import ProgressBar from '../ds/ProgressBar';
 
@@ -32,6 +33,7 @@ export default function DayTotalsCard({
   target,
   macros,
 }: Props) {
+  const t = useTokens();
   const rawPct = target > 0 ? (consumed / target) * 100 : 0;
   const displayedPct = Math.round(rawPct);
   const over = rawPct > 100;
@@ -43,10 +45,10 @@ export default function DayTotalsCard({
         {/* Calories hero row */}
         <View style={styles.heroRow}>
           <View style={styles.heroLeft}>
-            <Text style={[styles.heroValue, Tabular]}>
+            <Text style={[styles.heroValue, Tabular, { color: t.textPrimary }]}>
               {fmtNumber(consumed)}
             </Text>
-            <Text style={[styles.heroTarget, Tabular]}>
+            <Text style={[styles.heroTarget, Tabular, { color: t.textTertiary }]}>
               {' '}/ {fmtNumber(target)} kcal
             </Text>
           </View>
@@ -54,7 +56,7 @@ export default function DayTotalsCard({
             style={[
               styles.heroPct,
               Tabular,
-              { color: over ? OVER_COLOR : DS.accent },
+              { color: over ? OVER_COLOR : t.primary },
             ]}
           >
             {displayedPct}%
@@ -63,7 +65,7 @@ export default function DayTotalsCard({
 
         <ProgressBar
           value={fillRatio}
-          color={over ? OVER_COLOR : DS.accent}
+          color={over ? OVER_COLOR : t.primary}
           height={4}
           style={styles.heroBar}
         />
@@ -76,12 +78,12 @@ export default function DayTotalsCard({
             const macroFill = Math.min(1, macroPctRaw / 100);
             return (
               <View key={m.key} style={styles.macroCol}>
-                <Text style={styles.macroLabel}>
+                <Text style={[styles.macroLabel, { color: t.textSecondary }]}>
                   {m.label.toUpperCase()}
                 </Text>
                 <View style={styles.macroValueRow}>
-                  <Text style={[styles.macroValue, Tabular]}>{m.value}</Text>
-                  <Text style={styles.macroTarget}>/{m.target}g</Text>
+                  <Text style={[styles.macroValue, Tabular, { color: t.textPrimary }]}>{m.value}</Text>
+                  <Text style={[styles.macroTarget, { color: t.textTertiary }]}>/{m.target}g</Text>
                 </View>
                 <ProgressBar
                   value={macroFill}
@@ -116,13 +118,11 @@ const styles = StyleSheet.create({
   heroValue: {
     fontFamily: Font.bold,
     fontSize: 28,
-    color: DS.text,
     letterSpacing: -0.6,
   },
   heroTarget: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
   },
   heroPct: {
     fontFamily: Font.medium,
@@ -141,7 +141,6 @@ const styles = StyleSheet.create({
   macroLabel: {
     fontFamily: Font.semibold,
     fontSize: 10,
-    color: DS.textSecondary,
     letterSpacing: 0.6,
     marginBottom: 6,
   },
@@ -154,11 +153,9 @@ const styles = StyleSheet.create({
   macroValue: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
   },
   macroTarget: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: '#555',
   },
 });

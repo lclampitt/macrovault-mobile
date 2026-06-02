@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Check, Trash2 } from 'lucide-react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { ActiveSet } from '../../lib/active-workout-context';
 
 const DESTRUCTIVE = '#E5736A';
@@ -39,6 +40,7 @@ export default function SetRow({
   onToggleComplete,
   onDelete,
 }: Props) {
+  const t = useTokens();
   const completed = set.completed;
   const hasPrev = prevWeight != null && prevReps != null;
 
@@ -54,7 +56,7 @@ export default function SetRow({
       <View
         style={[
           styles.row,
-          styles.rowSurface,
+          { backgroundColor: t.bgCard },
           completed && styles.rowCompleted,
         ]}
       >
@@ -64,7 +66,7 @@ export default function SetRow({
           style={[
             styles.num,
             Tabular,
-            { color: completed ? DS.accent : DS.textTertiary },
+            { color: completed ? t.primary : t.textTertiary },
           ]}
         >
           {isPR ? '★' : setIndex + 1}
@@ -90,7 +92,7 @@ export default function SetRow({
             : 'No previous set'
         }
       >
-        <Text style={[styles.lastText, Tabular]}>
+        <Text style={[styles.lastText, Tabular, { color: t.textTertiary }]}>
           {hasPrev ? `${prevWeight}×${prevReps}` : '—'}
         </Text>
       </Pressable>
@@ -100,11 +102,16 @@ export default function SetRow({
         value={set.weight}
         onChangeText={(v) => onUpdate('weight', v)}
         placeholder="0"
-        placeholderTextColor={DS.textQuaternary}
+        placeholderTextColor={t.textQuaternary}
         keyboardType="decimal-pad"
         inputMode="decimal"
         selectTextOnFocus
-        style={[styles.input, styles.weightInput, completed && styles.inputCompleted]}
+        style={[
+          styles.input,
+          styles.weightInput,
+          { backgroundColor: t.bgInput, borderColor: t.borderDefault, color: t.textPrimary },
+          completed && { color: t.textTertiary, textDecorationLine: 'line-through', textDecorationColor: t.textQuaternary },
+        ]}
         accessibilityLabel={`Weight in pounds for set ${setIndex + 1}`}
       />
 
@@ -113,11 +120,16 @@ export default function SetRow({
         value={set.reps}
         onChangeText={(v) => onUpdate('reps', v)}
         placeholder="0"
-        placeholderTextColor={DS.textQuaternary}
+        placeholderTextColor={t.textQuaternary}
         keyboardType="numeric"
         inputMode="numeric"
         selectTextOnFocus
-        style={[styles.input, styles.repsInput, completed && styles.inputCompleted]}
+        style={[
+          styles.input,
+          styles.repsInput,
+          { backgroundColor: t.bgInput, borderColor: t.borderDefault, color: t.textPrimary },
+          completed && { color: t.textTertiary, textDecorationLine: 'line-through', textDecorationColor: t.textQuaternary },
+        ]}
         accessibilityLabel={`Reps for set ${setIndex + 1}`}
       />
 
@@ -126,7 +138,16 @@ export default function SetRow({
         onPress={onToggleComplete}
         style={({ pressed }) => [
           styles.completeBtn,
-          completed && styles.completeBtnActive,
+          { backgroundColor: t.bgInput, borderColor: t.borderDefault },
+          completed && {
+            backgroundColor: t.primary,
+            borderColor: t.primary,
+            shadowColor: t.primary,
+            shadowOpacity: 0.3,
+            shadowOffset: { width: 0, height: 4 },
+            shadowRadius: 12,
+            elevation: 4,
+          },
           pressed && styles.pressed,
         ]}
         accessibilityRole="button"
@@ -136,7 +157,7 @@ export default function SetRow({
       >
         <Check
           size={16}
-          color={completed ? '#000' : DS.textQuaternary}
+          color={completed ? t.textOnPrimary : t.textQuaternary}
           strokeWidth={3}
         />
       </Pressable>
@@ -150,10 +171,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-  },
-  rowSurface: {
-    // Solid bg so the row covers the red swipe-action behind it.
-    backgroundColor: DS.surface,
   },
   rowCompleted: {
     opacity: 0.85,
@@ -192,29 +209,20 @@ const styles = StyleSheet.create({
   lastText: {
     fontFamily: Font.medium,
     fontSize: 9,
-    color: '#555',
   },
   weightInput: {
     width: 72,
   },
   input: {
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 6,
     paddingVertical: 7,
     paddingHorizontal: 4,
-    color: DS.text,
     fontFamily: Font.bold,
     fontSize: 14,
     textAlign: 'center',
     letterSpacing: -0.3,
     fontVariant: ['tabular-nums'],
-  },
-  inputCompleted: {
-    color: '#555',
-    textDecorationLine: 'line-through',
-    textDecorationColor: '#333',
   },
   repsInput: {
     flex: 1,
@@ -223,20 +231,9 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: '#0F0F0F',
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  completeBtnActive: {
-    backgroundColor: DS.accent,
-    borderColor: DS.accent,
-    shadowColor: DS.accent,
-    shadowOpacity: 0.3,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
   },
   pressed: {
     transform: [{ scale: 0.9 }],

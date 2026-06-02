@@ -1,7 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Dumbbell, Repeat, Trash2 } from 'lucide-react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { fmtShortMonthDay } from '../../lib/date';
 import Card from '../ds/Card';
 import type { RecentWorkout } from '../../hooks/useRecentWorkouts';
@@ -32,11 +33,12 @@ export default function RecentWorkoutsList({
   onRepeat,
   onDelete,
 }: Props) {
+  const t = useTokens();
   return (
     <View>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>RECENT WORKOUTS</Text>
-        <Text style={[styles.count, Tabular]}>
+        <Text style={[styles.heading, { color: t.textTertiary }]}>RECENT WORKOUTS</Text>
+        <Text style={[styles.count, Tabular, { color: t.textSecondary }]}>
           {workouts.length} {workouts.length === 1 ? 'session' : 'sessions'}
         </Text>
       </View>
@@ -44,7 +46,7 @@ export default function RecentWorkoutsList({
       <View style={styles.outer}>
         <Card style={styles.card}>
           {workouts.length === 0 ? (
-            <Text style={styles.empty}>
+            <Text style={[styles.empty, { color: t.textTertiary }]}>
               No workouts yet. Quick Start above to log your first session.
             </Text>
           ) : (
@@ -62,26 +64,34 @@ export default function RecentWorkoutsList({
                   onPress={() => onPress(w)}
                   style={({ pressed }) => [
                     styles.row,
-                    styles.rowSurface,
-                    i < workouts.length - 1 && styles.rowDivider,
+                    { backgroundColor: t.bgCard },
+                    i < workouts.length - 1 && {
+                      borderBottomWidth: 1,
+                      borderBottomColor: t.borderSubtle,
+                    },
                     pressed && styles.rowPressed,
                   ]}
                   accessibilityRole="button"
                   accessibilityLabel={`View ${w.name}`}
                 >
-                  <View style={styles.iconBubble}>
-                    <Dumbbell size={14} color={DS.accent} strokeWidth={2} />
+                  <View
+                    style={[
+                      styles.iconBubble,
+                      { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                    ]}
+                  >
+                    <Dumbbell size={14} color={t.primary} strokeWidth={2} />
                   </View>
                   <View style={styles.body}>
-                    <Text style={styles.name} numberOfLines={1}>
+                    <Text style={[styles.name, { color: t.textPrimary }]} numberOfLines={1}>
                       {w.name}
                     </Text>
                     <View style={styles.metaRow}>
-                      <Text style={[styles.meta, Tabular]}>
+                      <Text style={[styles.meta, Tabular, { color: t.textTertiary }]}>
                         {fmtShort(w.date)}
                       </Text>
-                      <Text style={styles.metaDot}>·</Text>
-                      <Text style={[styles.meta, Tabular]}>
+                      <Text style={[styles.metaDot, { color: t.textQuaternary }]}>·</Text>
+                      <Text style={[styles.meta, Tabular, { color: t.textTertiary }]}>
                         {w.exerciseCount}{' '}
                         {w.exerciseCount === 1 ? 'exercise' : 'exercises'}
                       </Text>
@@ -94,14 +104,18 @@ export default function RecentWorkoutsList({
                     }}
                     style={({ pressed }) => [
                       styles.repeatBtn,
+                      {
+                        backgroundColor: t.primaryTintBg,
+                        borderColor: t.primaryTintBorder,
+                      },
                       pressed && styles.repeatBtnPressed,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Repeat ${w.name}`}
                     hitSlop={6}
                   >
-                    <Repeat size={12} color={DS.accent} strokeWidth={2.5} />
-                    <Text style={styles.repeatText}>Repeat</Text>
+                    <Repeat size={12} color={t.primary} strokeWidth={2.5} />
+                    <Text style={[styles.repeatText, { color: t.primary }]}>Repeat</Text>
                   </Pressable>
                 </Pressable>
               </Swipeable>
@@ -124,13 +138,11 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
     letterSpacing: 1,
   },
   count: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   outer: {
     marginHorizontal: 20,
@@ -145,14 +157,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
-  },
-  rowSurface: {
-    // Solid bg so the swipe-action behind the row isn't visible at rest.
-    backgroundColor: DS.surface,
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
   },
   rowPressed: {
     backgroundColor: 'rgba(255,255,255,0.03)',
@@ -174,9 +178,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 8,
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -186,7 +188,6 @@ const styles = StyleSheet.create({
   name: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   metaRow: {
     flexDirection: 'row',
@@ -197,10 +198,8 @@ const styles = StyleSheet.create({
   meta: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   metaDot: {
-    color: DS.textDimmest,
     fontSize: 10,
   },
   repeatBtn: {
@@ -211,8 +210,6 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
-    backgroundColor: 'rgba(16, 185, 129, 0.1)',
   },
   repeatBtnPressed: {
     transform: [{ scale: 0.95 }],
@@ -220,12 +217,10 @@ const styles = StyleSheet.create({
   repeatText: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
   },
   empty: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     paddingVertical: 28,
     paddingHorizontal: 18,

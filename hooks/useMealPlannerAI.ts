@@ -32,6 +32,8 @@ type State = {
   weekProgress: { done: number; total: number }; // 0/7 → 7/7
   /** /meal-planner/suggest — 5 options for one slot. */
   suggestForSlot: (args: {
+    /** 0=Mon … 6=Sun — converted to a day-name string for the backend. */
+    dayOfWeek: number;
     mealType: MealType;
     remaining: { calories: number; protein: number; carbs: number; fat: number };
     goal: string; // 'cutting' | 'bulking' | 'maintenance'
@@ -49,6 +51,24 @@ function normalizeMealType(s: string): MealType {
   const v = s.toLowerCase();
   if (v === 'breakfast' || v === 'lunch' || v === 'dinner') return v;
   return 'lunch';
+}
+
+// Mobile's day_of_week is 0=Mon … 6=Sun (matches DAY_LABELS in useMealPlanWeek).
+// The FastAPI /meal-planner/suggest endpoint now requires `day` as a string —
+// the web app sends full English weekday names, so we match that here.
+const DAY_NAMES = [
+  'Monday',
+  'Tuesday',
+  'Wednesday',
+  'Thursday',
+  'Friday',
+  'Saturday',
+  'Sunday',
+] as const;
+
+function dayNameFromIndex(i: number): string {
+  if (i < 0 || i > 6 || !Number.isFinite(i)) return 'Monday';
+  return DAY_NAMES[i];
 }
 
 function normalizeSuggestion(m: any): AISuggestion {
@@ -94,7 +114,7 @@ export function useMealPlannerAI(): State {
   const [weekProgress, setWeekProgress] = useState({ done: 0, total: 0 });
 
   const suggestForSlot = useCallback<State['suggestForSlot']>(
-    async ({ mealType, remaining, goal, dietPreference }) => {
+    async ({ dayOfWeek, mealType, remaining, goal, dietPreference }) => {
       if (!user) return { suggestions: null, error: 'Not authenticated' };
       setLoading(true);
       try {
@@ -103,6 +123,10 @@ export function useMealPlannerAI(): State {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             user_id: user.id,
+            // Required by MealSuggestRequest — full English weekday name.
+            // Backend treats this as the prompt's "what day are we planning"
+            // hint so meals get a bit of natural variety across the week.
+            day: dayNameFromIndex(dayOfWeek),
             meal_type: mealType,
             remaining_calories: Math.max(0, Math.round(remaining.calories)),
             remaining_protein: Math.max(0, Math.round(remaining.protein)),
@@ -199,6 +223,8 @@ export function useMealPlannerAI(): State {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               user_id: user.id,
+              // /suggest now requires `day` — Sat=5, Sun=6 → "Saturday"/"Sunday".
+              day: dayNameFromIndex(slot.day),
               meal_type: slot.mt,
               remaining_calories: split.calories,
               remaining_protein: split.protein,

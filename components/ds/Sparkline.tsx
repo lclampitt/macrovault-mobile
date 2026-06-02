@@ -4,7 +4,7 @@ import Svg, {
   Path,
   Stop,
 } from 'react-native-svg';
-import { DS } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   /** Y values (0-based). Any length; rescaled to fit. */
@@ -22,8 +22,10 @@ export default function Sparkline({
   points,
   width = 120,
   height = 24,
-  color = DS.accent,
+  color,
 }: Props) {
+  const t = useTokens();
+  const strokeColor = color ?? t.primary;
   if (points.length < 2) return null;
   const min = Math.min(...points);
   const max = Math.max(...points);
@@ -47,15 +49,15 @@ export default function Sparkline({
     <Svg width={width} height={height}>
       <Defs>
         <LinearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0%" stopColor={color} stopOpacity={0.3} />
-          <Stop offset="100%" stopColor={color} stopOpacity={0} />
+          <Stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
+          <Stop offset="100%" stopColor={strokeColor} stopOpacity={0} />
         </LinearGradient>
       </Defs>
       <Path d={fillPath} fill={`url(#${gradId})`} />
       <Path
         d={linePath}
         fill="none"
-        stroke={color}
+        stroke={strokeColor}
         strokeWidth={1.5}
         strokeLinecap="round"
         strokeLinejoin="round"

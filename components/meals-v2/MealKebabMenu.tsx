@@ -1,15 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Copy, RefreshCw, Trash2 } from 'lucide-react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   onSwap: () => void;
   onDuplicate: () => void;
   onRemove: () => void;
 };
-
-/** Desaturated coral for destructive actions only — per design system spec. */
-const DESTRUCTIVE = '#E5736A';
 
 /**
  * Floating dropdown anchored at top-right of the kebab button. Background
@@ -23,38 +21,55 @@ export default function MealKebabMenu({
   onDuplicate,
   onRemove,
 }: Props) {
+  const t = useTokens();
   return (
     <View
-      style={styles.menu}
+      style={[
+        styles.menu,
+        {
+          backgroundColor: t.bgCard,
+          borderColor: t.borderStrong,
+        },
+        t.shadowElevated,
+      ]}
       accessibilityRole="menu"
     >
       <Pressable
         onPress={onSwap}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          pressed && { backgroundColor: t.bgCardElevated },
+        ]}
         accessibilityRole="menuitem"
         accessibilityLabel="Swap meal"
       >
-        <RefreshCw size={14} color={DS.textSecondary} strokeWidth={2} />
-        <Text style={styles.itemLabel}>Swap meal</Text>
+        <RefreshCw size={14} color={t.textSecondary} strokeWidth={2} />
+        <Text style={[styles.itemLabel, { color: t.textPrimary }]}>Swap meal</Text>
       </Pressable>
       <Pressable
         onPress={onDuplicate}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          pressed && { backgroundColor: t.bgCardElevated },
+        ]}
         accessibilityRole="menuitem"
         accessibilityLabel="Duplicate meal"
       >
-        <Copy size={14} color={DS.textSecondary} strokeWidth={2} />
-        <Text style={styles.itemLabel}>Duplicate</Text>
+        <Copy size={14} color={t.textSecondary} strokeWidth={2} />
+        <Text style={[styles.itemLabel, { color: t.textPrimary }]}>Duplicate</Text>
       </Pressable>
-      <View style={styles.divider} />
+      <View style={[styles.divider, { backgroundColor: t.borderSubtle }]} />
       <Pressable
         onPress={onRemove}
-        style={({ pressed }) => [styles.item, pressed && styles.itemPressed]}
+        style={({ pressed }) => [
+          styles.item,
+          pressed && { backgroundColor: t.bgCardElevated },
+        ]}
         accessibilityRole="menuitem"
         accessibilityLabel="Remove meal"
       >
-        <Trash2 size={14} color={DESTRUCTIVE} strokeWidth={2} />
-        <Text style={[styles.itemLabel, { color: DESTRUCTIVE }]}>Remove</Text>
+        <Trash2 size={14} color={t.destructive} strokeWidth={2} />
+        <Text style={[styles.itemLabel, { color: t.destructive }]}>Remove</Text>
       </Pressable>
     </View>
   );
@@ -67,17 +82,9 @@ const styles = StyleSheet.create({
     top: 36,
     zIndex: 50,
     minWidth: 160,
-    backgroundColor: '#141414',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
     borderRadius: 12,
     paddingVertical: 4,
-    // Elevated shadow per spec
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.8,
-    shadowRadius: 16,
-    elevation: 12,
   },
   item: {
     flexDirection: 'row',
@@ -86,18 +93,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 9,
   },
-  itemPressed: {
-    backgroundColor: 'rgba(255,255,255,0.05)',
-  },
   itemLabel: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.text,
   },
   divider: {
     height: 1,
     marginHorizontal: 8,
     marginVertical: 4,
-    backgroundColor: '#2A2A2A',
   },
 });

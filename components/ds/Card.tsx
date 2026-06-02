@@ -1,6 +1,7 @@
 import { StyleSheet, View, type ViewProps, type ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DS, Radius, Spacing } from '../../lib/design-system';
+import { Radius, Spacing } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import CornerBrackets from './CornerBrackets';
 
 type Tone = 'default' | 'emerald';
@@ -14,9 +15,9 @@ type Props = ViewProps & {
 };
 
 /**
- * Base card primitive. Default tone = #0A0A0A with #1A1A1A border.
- * Emerald tone applies the subtle gradient + emerald border treatment from
- * the spec (used on the Next Up / Calories hero cards).
+ * Base card primitive. Default tone reads from `tokens.bgCard` so the same
+ * surface looks correct in dark / light / sakura. Emerald tone overlays the
+ * `tokens.gradientCardTinted` gradient on top of the base card.
  */
 export default function Card({
   tone = 'default',
@@ -26,6 +27,7 @@ export default function Card({
   style,
   ...rest
 }: Props) {
+  const t = useTokens();
   const paddingStyle =
     size === 'lg'
       ? styles.padLg
@@ -35,12 +37,19 @@ export default function Card({
 
   if (tone === 'emerald') {
     return (
-      <View style={[styles.outer, styles.emeraldBorder, style]} {...rest}>
+      <View
+        style={[
+          styles.outer,
+          {
+            borderColor: t.primaryTintBorder,
+            backgroundColor: t.bgCard,
+          },
+          style,
+        ]}
+        {...rest}
+      >
         <LinearGradient
-          colors={[
-            'rgba(16, 185, 129, 0.06)',
-            'rgba(16, 185, 129, 0.02)',
-          ]}
+          colors={t.gradientCardTinted as unknown as readonly [string, string]}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={[styles.inner, paddingStyle]}
@@ -53,7 +62,18 @@ export default function Card({
   }
 
   return (
-    <View style={[styles.outer, styles.defaultBorder, paddingStyle, style]} {...rest}>
+    <View
+      style={[
+        styles.outer,
+        {
+          backgroundColor: t.bgCard,
+          borderColor: t.borderDefault,
+        },
+        paddingStyle,
+        style,
+      ]}
+      {...rest}
+    >
       {children}
       {brackets ? <CornerBrackets /> : null}
     </View>
@@ -65,17 +85,8 @@ const styles = StyleSheet.create({
     borderRadius: Radius.card,
     overflow: 'hidden',
     position: 'relative',
+    borderWidth: 1,
   } as ViewStyle,
-  defaultBorder: {
-    backgroundColor: DS.surface,
-    borderWidth: 1,
-    borderColor: DS.border,
-  },
-  emeraldBorder: {
-    borderWidth: 1,
-    borderColor: DS.accentBorder,
-    backgroundColor: DS.surface,
-  },
   inner: {
     borderRadius: Radius.card,
   },

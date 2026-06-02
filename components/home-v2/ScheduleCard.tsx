@@ -10,7 +10,8 @@ import {
   X,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { ScheduleItem, ScheduleKind } from '../../lib/schedule-store';
 import Card from '../ds/Card';
 import SectionLabel from '../ds/SectionLabel';
@@ -52,6 +53,7 @@ export default function ScheduleCard({
   onLogMeal,
   onRemove,
 }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.outer}>
       <View style={styles.headerRow}>
@@ -62,28 +64,40 @@ export default function ScheduleCard({
             hitSlop={6}
             style={({ pressed }) => [
               styles.headerChip,
-              styles.headerChipSolid,
+              {
+                backgroundColor: t.primary,
+                borderColor: t.primary,
+              },
               pressed && styles.addBtnPressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Log a meal"
           >
-            <Plus size={12} color="#000" strokeWidth={2.5} />
-            <Text style={styles.headerChipSolidLabel}>Log meal</Text>
+            <Plus size={12} color={t.textOnPrimary} strokeWidth={2.5} />
+            <Text
+              style={[styles.headerChipLabel, { color: t.textOnPrimary }]}
+            >
+              Log meal
+            </Text>
           </Pressable>
           <Pressable
             onPress={onAdd}
             hitSlop={6}
             style={({ pressed }) => [
               styles.headerChip,
-              styles.headerChipOutline,
+              {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryTintBorder,
+              },
               pressed && styles.addBtnPressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Add to schedule"
           >
-            <CalendarPlus size={12} color={DS.accent} strokeWidth={2.5} />
-            <Text style={styles.headerChipLabel}>Plan</Text>
+            <CalendarPlus size={12} color={t.primary} strokeWidth={2.5} />
+            <Text style={[styles.headerChipLabel, { color: t.primary }]}>
+              Plan
+            </Text>
           </Pressable>
         </View>
       </View>
@@ -99,12 +113,22 @@ export default function ScheduleCard({
             accessibilityRole="button"
             accessibilityLabel="Add your first schedule item"
           >
-            <View style={styles.emptyIcon}>
-              <CalendarPlus size={16} color={DS.accent} strokeWidth={2} />
+            <View
+              style={[
+                styles.emptyIcon,
+                {
+                  backgroundColor: t.primaryTintBg,
+                  borderColor: t.primaryTintBorder,
+                },
+              ]}
+            >
+              <CalendarPlus size={16} color={t.primary} strokeWidth={2} />
             </View>
             <View style={{ flex: 1 }}>
-              <Text style={styles.emptyTitle}>Plan your day</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptyTitle, { color: t.textPrimary }]}>
+                Plan your day
+              </Text>
+              <Text style={[styles.emptySub, { color: t.textTertiary }]}>
                 Add meals, workouts, weigh-ins, or anything else you want on
                 deck for today.
               </Text>
@@ -119,29 +143,47 @@ export default function ScheduleCard({
                 key={item.id}
                 style={[
                   styles.row,
-                  i < items.length - 1 && styles.rowDivider,
+                  i < items.length - 1 && {
+                    borderBottomWidth: 1,
+                    borderBottomColor: t.borderSubtle,
+                  },
                 ]}
               >
-                <Text style={[styles.time, Tabular]}>
+                <Text
+                  style={[styles.time, Tabular, { color: t.textSecondary }]}
+                >
                   {fmtTime12(item.time)}
                 </Text>
                 <View
                   style={[
                     styles.iconWrap,
-                    accent && styles.iconWrapEmerald,
+                    {
+                      backgroundColor: accent
+                        ? t.primaryTintBg
+                        : t.bgCardElevated,
+                      borderColor: accent
+                        ? t.primaryTintBorder
+                        : t.borderDefault,
+                    },
                   ]}
                 >
                   <Icon
                     size={14}
-                    color={accent ? DS.accent : DS.textSecondary}
+                    color={accent ? t.primary : t.textSecondary}
                     strokeWidth={2}
                   />
                 </View>
                 <View style={styles.body}>
-                  <Text style={styles.title} numberOfLines={1}>
+                  <Text
+                    style={[styles.title, { color: t.textPrimary }]}
+                    numberOfLines={1}
+                  >
                     {item.title}
                   </Text>
-                  <Text style={styles.meta} numberOfLines={1}>
+                  <Text
+                    style={[styles.meta, { color: t.textTertiary }]}
+                    numberOfLines={1}
+                  >
                     {item.notes?.trim()
                       ? item.notes.trim()
                       : KIND_LABEL[item.kind]}
@@ -153,13 +195,19 @@ export default function ScheduleCard({
                     hitSlop={6}
                     style={({ pressed }) => [
                       styles.logBtn,
+                      {
+                        backgroundColor: t.primaryTintBg,
+                        borderColor: t.primaryTintBorder,
+                      },
                       pressed && styles.removeBtnPressed,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Log ${item.title}`}
                   >
-                    <Check size={12} color={DS.accent} strokeWidth={2.5} />
-                    <Text style={styles.logBtnLabel}>Log</Text>
+                    <Check size={12} color={t.primary} strokeWidth={2.5} />
+                    <Text style={[styles.logBtnLabel, { color: t.primary }]}>
+                      Log
+                    </Text>
                   </Pressable>
                 ) : null}
                 {onRemove ? (
@@ -168,12 +216,13 @@ export default function ScheduleCard({
                     hitSlop={8}
                     style={({ pressed }) => [
                       styles.removeBtn,
+                      { backgroundColor: t.bgCardElevated },
                       pressed && styles.removeBtnPressed,
                     ]}
                     accessibilityRole="button"
                     accessibilityLabel={`Remove ${item.title}`}
                   >
-                    <X size={12} color={DS.textTertiary} strokeWidth={2} />
+                    <X size={12} color={t.textTertiary} strokeWidth={2} />
                   </Pressable>
                 ) : null}
               </View>
@@ -208,24 +257,9 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     borderWidth: 1,
   },
-  headerChipSolid: {
-    backgroundColor: DS.accent,
-    borderColor: DS.accent,
-  },
-  headerChipSolidLabel: {
-    fontFamily: Font.bold,
-    fontSize: 10,
-    color: '#000',
-    letterSpacing: 0.2,
-  },
-  headerChipOutline: {
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
-  },
   headerChipLabel: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
     letterSpacing: 0.2,
   },
   addBtnPressed: { opacity: 0.7 },
@@ -236,14 +270,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 5,
     borderRadius: 999,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
   },
   logBtnLabel: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.accent,
     letterSpacing: 0.3,
   },
   card: {
@@ -262,8 +293,6 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -271,13 +300,11 @@ const styles = StyleSheet.create({
   emptyTitle: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   emptySub: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
     marginTop: 2,
     lineHeight: 15,
   },
@@ -288,14 +315,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
-  },
   time: {
     fontFamily: Font.bold,
     fontSize: 11,
-    color: DS.textSecondary,
     letterSpacing: 0,
     width: 64,
   },
@@ -304,14 +326,8 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: DS.border,
-    backgroundColor: DS.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrapEmerald: {
-    backgroundColor: DS.accentSoft,
-    borderColor: 'rgba(16, 185, 129, 0.2)',
   },
   body: {
     flex: 1,
@@ -320,18 +336,15 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.semibold,
     fontSize: 13,
-    color: DS.text,
   },
   meta: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textTertiary,
   },
   removeBtn: {
     width: 26,
     height: 26,
     borderRadius: 8,
-    backgroundColor: DS.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
   },

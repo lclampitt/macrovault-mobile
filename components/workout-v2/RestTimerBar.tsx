@@ -9,7 +9,8 @@ import Animated, {
 } from 'react-native-reanimated';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Timer, X } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -43,6 +44,7 @@ export default function RestTimerBar({
   onCancel,
   onEditTarget,
 }: Props) {
+  const t = useTokens();
   const remaining = Math.max(0, target - elapsed);
   const pct = target > 0 ? Math.min(1, elapsed / target) : 0;
 
@@ -59,10 +61,15 @@ export default function RestTimerBar({
   }));
 
   return (
-    <View style={styles.outer}>
-      <View style={styles.bar}>
+    <View style={[styles.outer, { borderBottomColor: t.borderDefault }]}>
+      <View
+        style={[
+          styles.bar,
+          { backgroundColor: t.bgCard, borderColor: t.primaryTintBorder },
+        ]}
+      >
         <LinearGradient
-          colors={['rgba(16,185,129,0.06)', 'rgba(16,185,129,0.02)']}
+          colors={t.gradientCardTinted}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           style={StyleSheet.absoluteFillObject}
@@ -76,7 +83,7 @@ export default function RestTimerBar({
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke="rgba(16, 185, 129, 0.15)"
+              stroke={t.primaryTintBorder}
               strokeWidth={STROKE}
             />
             {/* Progress — rotated -90° so it starts at 12 o'clock */}
@@ -85,7 +92,7 @@ export default function RestTimerBar({
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke={DS.accent}
+              stroke={t.primary}
               strokeWidth={STROKE}
               strokeLinecap="round"
               strokeDasharray={C}
@@ -94,7 +101,7 @@ export default function RestTimerBar({
             />
           </Svg>
           <View style={styles.ringIcon} pointerEvents="none">
-            <Timer size={13} color={DS.accent} strokeWidth={2.5} />
+            <Timer size={13} color={t.primary} strokeWidth={2.5} />
           </View>
         </View>
 
@@ -104,9 +111,9 @@ export default function RestTimerBar({
           accessibilityRole="button"
           accessibilityLabel="Change rest length"
         >
-          <Text style={styles.label}>REST · TAP TO CHANGE</Text>
+          <Text style={[styles.label, { color: t.primary }]}>REST · TAP TO CHANGE</Text>
           <Text
-            style={[styles.value, Tabular]}
+            style={[styles.value, Tabular, { color: t.textPrimary }]}
             accessibilityLiveRegion="polite"
           >
             {fmtTime(remaining)}
@@ -118,23 +125,25 @@ export default function RestTimerBar({
             onPress={onAdd15}
             style={({ pressed }) => [
               styles.actionBtn,
+              { backgroundColor: t.bgPage, borderColor: t.borderDefault },
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Add 15 seconds"
           >
-            <Text style={[styles.add15, Tabular]}>+15</Text>
+            <Text style={[styles.add15, Tabular, { color: t.primary }]}>+15</Text>
           </Pressable>
           <Pressable
             onPress={onCancel}
             style={({ pressed }) => [
               styles.actionBtn,
+              { backgroundColor: t.bgPage, borderColor: t.borderDefault },
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel rest timer"
           >
-            <X size={13} color={DS.textSecondary} strokeWidth={2} />
+            <X size={13} color={t.textSecondary} strokeWidth={2} />
           </Pressable>
         </View>
       </View>
@@ -146,16 +155,12 @@ const styles = StyleSheet.create({
   outer: {
     paddingHorizontal: 20,
     paddingVertical: 8,
-    backgroundColor: 'rgba(0,0,0,0.95)',
     borderBottomWidth: 1,
-    borderBottomColor: DS.border,
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: DS.surface,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     borderRadius: 12,
     paddingHorizontal: 12,
@@ -182,13 +187,11 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
     letterSpacing: 0.6,
   },
   value: {
     fontFamily: Font.bold,
     fontSize: 15,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   actions: {
@@ -199,8 +202,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: DS.bg,
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -211,6 +212,5 @@ const styles = StyleSheet.create({
   add15: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
   },
 });

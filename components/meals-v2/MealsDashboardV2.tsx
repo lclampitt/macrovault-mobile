@@ -2,8 +2,8 @@ import { useCallback, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
-import { DS, Font, Motion } from '../../lib/design-system';
+import { Font, Motion } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { fmtLocalDate } from '../../lib/date';
 import {
   addDays,
@@ -26,13 +26,13 @@ import {
 import LogMealSheet from '../meal-log/LogMealSheet';
 
 import WeekNavigator from './WeekNavigator';
+import LogMealBanner from './LogMealBanner';
 import AISuggestWeekBanner from './AISuggestWeekBanner';
 import DayStrip, { type DayCell } from './DayStrip';
 import DayHeader from './DayHeader';
 import DayTotalsCard from './DayTotalsCard';
 import MealCard from './MealCard';
 import EmptyMealSlot from './EmptyMealSlot';
-import AnythingElseFooter from './AnythingElseFooter';
 import SwapMealModal, {
   type SlotAIContext,
   type SwapSlot,
@@ -106,6 +106,7 @@ function nameKey(s: string): string {
 // --------------------------------------------------------------------------
 
 export default function MealsDashboardV2() {
+  const t = useTokens();
   const today = useMemo(() => new Date(), []);
 
   const [weekStart, setWeekStart] = useState<Date>(() => getMonday(today));
@@ -420,6 +421,7 @@ export default function MealsDashboardV2() {
     };
     for (const slot of ['breakfast', 'lunch', 'dinner'] as const) {
       const r = await suggestForSlot({
+        dayOfWeek: selectedDay,
         mealType: slot,
         remaining: split,
         goal: goalKey,
@@ -507,19 +509,30 @@ export default function MealsDashboardV2() {
 
   // ----------- Render -----------
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      {/* Emerald top spine to match dashboard chrome */}
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.08)', 'transparent']}
-        style={styles.topSpine}
-        pointerEvents="none"
-      />
+    <SafeAreaView
+      style={styles.safeArea}
+      edges={['bottom']}
+    >
+      {/* The emerald top spine now lives at the app shell level so it
+          bleeds through the chrome header — see _layout.tsx's
+          <TopGradientGlow />. */}
 
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* Primary CTA — this is where meal logging lives now (used to
+            live on the floating + button, which is now dedicated to
+            starting workouts). Opens the same LogMealSheet. */}
+        <LogMealBanner
+          onPress={() => {
+            setLogSheetPeriod(periodFromDate());
+            setLogSheetPrefill({});
+            setLogSheetOpen(true);
+          }}
+        />
+
         <WeekNavigator
           weekStart={weekStart}
           loggedKcal={weekKcalLogged}
@@ -572,21 +585,21 @@ export default function MealsDashboardV2() {
                 label: 'Protein',
                 value: Math.round(dayTotals.protein),
                 target: targetProtein,
-                color: DS.accent,
+                color: t.macroProtein,
               },
               {
                 key: 'carbs',
                 label: 'Carbs',
                 value: Math.round(dayTotals.carbs),
                 target: targetCarbs,
-                color: DS.accentLight,
+                color: t.macroCarbs,
               },
               {
                 key: 'fat',
                 label: 'Fat',
                 value: Math.round(dayTotals.fat),
                 target: targetFat,
-                color: DS.accentMid,
+                color: t.macroFat,
               },
             ]}
           />
@@ -629,14 +642,9 @@ export default function MealsDashboardV2() {
             ));
           })}
 
-          {/* "Anything else to add?" routes to the shared log sheet — this
-              records actual consumption (not a plan slot). */}
-          <AnythingElseFooter
-            onPress={() => {
-              setLogSheetPeriod(periodFromDate());
-              setLogSheetOpen(true);
-            }}
-          />
+          {/* "Anything else to add?" was removed — the top-of-page "Log
+              meal" CTA already covers logging actual consumption that
+              isn't tied to a plan slot. */}
         </Animated.View>
 
         <View style={styles.bottomSpacer} />
@@ -697,14 +705,6 @@ export default function MealsDashboardV2() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: DS.bg,
-  },
-  topSpine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
   },
   scroll: {
     flex: 1,

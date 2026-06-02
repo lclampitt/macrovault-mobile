@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 export type DayCell = {
   /** 'MON', 'TUE', ... */
@@ -23,6 +24,7 @@ function fmtNumber(n: number): string {
 }
 
 export default function DayStrip({ days, selectedIndex, onSelect }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.row}>
       {days.map((d, i) => {
@@ -31,7 +33,14 @@ export default function DayStrip({ days, selectedIndex, onSelect }: Props) {
           <Pressable
             key={i}
             onPress={() => onSelect(i)}
-            style={[styles.cell, isSelected && styles.cellSelected]}
+            style={[
+              styles.cell,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              isSelected && {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryBorderStrong,
+              },
+            ]}
             accessibilityRole="button"
             accessibilityLabel={`${d.letter} ${d.dateNum}`}
             accessibilityState={{ selected: isSelected }}
@@ -40,16 +49,15 @@ export default function DayStrip({ days, selectedIndex, onSelect }: Props) {
               <View
                 style={[
                   styles.loggedDot,
-                  isSelected
-                    ? styles.loggedDotSelected
-                    : styles.loggedDotMuted,
+                  { backgroundColor: t.primary },
+                  !isSelected && styles.loggedDotMuted,
                 ]}
               />
             ) : null}
             <Text
               style={[
                 styles.letter,
-                { color: isSelected ? DS.accent : DS.textTertiary },
+                { color: isSelected ? t.primary : t.textTertiary },
               ]}
             >
               {d.letter}
@@ -58,7 +66,7 @@ export default function DayStrip({ days, selectedIndex, onSelect }: Props) {
               style={[
                 styles.date,
                 Tabular,
-                { color: isSelected ? DS.text : DS.textSecondary },
+                { color: isSelected ? t.textPrimary : t.textSecondary },
               ]}
             >
               {d.dateNum}
@@ -68,7 +76,7 @@ export default function DayStrip({ days, selectedIndex, onSelect }: Props) {
                 styles.kcal,
                 Tabular,
                 {
-                  color: isSelected ? DS.accent : DS.textQuaternary,
+                  color: isSelected ? t.primary : t.textQuaternary,
                 },
               ]}
             >
@@ -94,16 +102,10 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 4,
     borderRadius: Radius.cardCompact,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     alignItems: 'center',
     gap: 4,
     position: 'relative',
-  },
-  cellSelected: {
-    backgroundColor: 'rgba(16, 185, 129, 0.08)',
-    borderColor: 'rgba(16, 185, 129, 0.4)',
   },
   loggedDot: {
     position: 'absolute',
@@ -113,11 +115,7 @@ const styles = StyleSheet.create({
     height: 5,
     borderRadius: 3,
   },
-  loggedDotSelected: {
-    backgroundColor: DS.accent,
-  },
   loggedDotMuted: {
-    backgroundColor: DS.accent,
     opacity: 0.6,
   },
   letter: {

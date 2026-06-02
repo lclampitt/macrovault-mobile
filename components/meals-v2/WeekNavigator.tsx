@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronLeft, ChevronRight } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { addDays } from '../../hooks/useMealPlanWeek';
 
 type Props = {
@@ -26,6 +27,7 @@ export default function WeekNavigator({
   onPrev,
   onNext,
 }: Props) {
+  const t = useTokens();
   const sun = addDays(weekStart, 6);
   const weekTarget = targetKcalPerDay * 7;
 
@@ -33,30 +35,40 @@ export default function WeekNavigator({
     <View style={styles.row}>
       <Pressable
         onPress={onPrev}
-        style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          pressed && styles.pressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Previous week"
       >
-        <ChevronLeft size={16} color={DS.textSecondary} strokeWidth={2} />
+        <ChevronLeft size={16} color={t.textSecondary} strokeWidth={2} />
       </Pressable>
 
       <View style={styles.center}>
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: t.textPrimary }]}>
           {fmtShortDay(weekStart)} – {fmtShortDay(sun)}
         </Text>
-        <Text style={[styles.subtitle, Tabular]}>
-          <Text style={styles.subtitleValue}>{fmtNumber(loggedKcal)}</Text>{' '}
+        <Text
+          style={[styles.subtitle, Tabular, { color: t.textTertiary }]}
+        >
+          <Text style={{ color: t.textPrimary }}>{fmtNumber(loggedKcal)}</Text>{' '}
           / {fmtNumber(weekTarget)} kcal
         </Text>
       </View>
 
       <Pressable
         onPress={onNext}
-        style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.iconBtn,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          pressed && styles.pressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel="Next week"
       >
-        <ChevronRight size={16} color={DS.textSecondary} strokeWidth={2} />
+        <ChevronRight size={16} color={t.textSecondary} strokeWidth={2} />
       </Pressable>
     </View>
   );
@@ -76,8 +88,6 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: DS.border,
-    backgroundColor: DS.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -90,15 +100,10 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
   },
   subtitle: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
     marginTop: 2,
-  },
-  subtitleValue: {
-    color: DS.text,
   },
 });

@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import Card from '../ds/Card';
 import Sparkline from '../ds/Sparkline';
 import CaloriesBurnedTile, {
@@ -25,25 +26,30 @@ function fmtWeight(n: number): string {
 }
 
 export default function StatsGrid({ bodyweight, burned }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.row}>
       <Card style={styles.tile}>
         <View style={styles.headerRow}>
-          <Text style={styles.label}>BODYWEIGHT</Text>
+          <Text style={[styles.label, { color: t.textTertiary }]}>
+            BODYWEIGHT
+          </Text>
           {bodyweight.deltaLb < 0 ? (
-            <ArrowDownRight size={14} color={DS.accent} strokeWidth={2.5} />
+            <ArrowDownRight size={14} color={t.primary} strokeWidth={2.5} />
           ) : (
-            <ArrowUpRight size={14} color={DS.accent} strokeWidth={2.5} />
+            <ArrowUpRight size={14} color={t.primary} strokeWidth={2.5} />
           )}
         </View>
         <View style={styles.valueRow}>
-          <Text style={[styles.value, Tabular]}>
+          <Text style={[styles.value, Tabular, { color: t.textPrimary }]}>
             {fmtWeight(bodyweight.valueLb)}
           </Text>
-          <Text style={styles.unit}>lb</Text>
+          <Text style={[styles.unit, { color: t.textSecondary }]}>lb</Text>
         </View>
-        <Text style={[styles.meta, Tabular]}>
-          <Text style={{ color: DS.accent }}>
+        <Text
+          style={[styles.meta, Tabular, { color: t.textSecondary }]}
+        >
+          <Text style={{ color: t.primary }}>
             {bodyweight.deltaLb > 0 ? '+' : ''}
             {fmtWeight(bodyweight.deltaLb)} lb
           </Text>{' '}
@@ -76,9 +82,8 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   label: {
-    fontFamily: Font.semibold,
+    fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textSecondary,
     letterSpacing: 0.6,
   },
   valueRow: {
@@ -89,18 +94,15 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: Font.bold,
     fontSize: 28,
-    color: DS.text,
     letterSpacing: -0.6,
   },
   unit: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   meta: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
     marginTop: 6,
   },
   sparkWrap: {

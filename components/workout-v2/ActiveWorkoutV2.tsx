@@ -15,7 +15,8 @@ import DraggableFlatList, {
   type RenderItemParams,
 } from 'react-native-draggable-flatlist';
 import { Plus } from 'lucide-react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import {
   useActiveWorkout,
   type ActiveExercise,
@@ -43,6 +44,7 @@ function parseNum(s: string): number {
 export default function ActiveWorkoutV2() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const t = useTokens();
   const {
     state,
     setName,
@@ -51,6 +53,7 @@ export default function ActiveWorkoutV2() {
     addSet,
     removeSet,
     updateSet,
+    setExerciseSkipped,
     reorderExercises,
     reset,
   } = useActiveWorkout();
@@ -282,11 +285,22 @@ export default function ActiveWorkoutV2() {
             setOpenMenuExId(null);
             setMetricsExId(item.id);
           }}
+          onToggleSkipped={() => {
+            setOpenMenuExId(null);
+            setExerciseSkipped(item.id, !item.skipped);
+          }}
           drag={drag}
         />
       </ScaleDecorator>
     ),
-    [openMenuExId, addSet, removeSet, removeExercise, updateSet],
+    [
+      openMenuExId,
+      addSet,
+      removeSet,
+      removeExercise,
+      updateSet,
+      setExerciseSkipped,
+    ],
   );
 
   const ListFooter = (
@@ -296,13 +310,14 @@ export default function ActiveWorkoutV2() {
           onPress={() => setShowAddSheet(true)}
           style={({ pressed }) => [
             styles.addCta,
+            { backgroundColor: t.primaryTintBg, borderColor: t.primaryBorderStrong },
             pressed && styles.addCtaPressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel="Add exercise"
         >
-          <Plus size={16} color={DS.accent} strokeWidth={2.5} />
-          <Text style={styles.addCtaLabel}>Add exercise</Text>
+          <Plus size={16} color={t.primary} strokeWidth={2.5} />
+          <Text style={[styles.addCtaLabel, { color: t.primary }]}>Add exercise</Text>
         </Pressable>
       </View>
       <Pressable
@@ -323,14 +338,11 @@ export default function ActiveWorkoutV2() {
         style={styles.flex}
       >
         {/* Sticky header + rest timer */}
-        <View style={styles.stickyHeader}>
+        <View style={[styles.stickyHeader, { backgroundColor: t.bgPage }]}>
           <ActiveStickyHeader
             workoutName={state.name}
             onChangeName={setName}
             elapsedSeconds={elapsedSeconds}
-            doneSets={doneSets}
-            totalSets={totalSets}
-            totalVolume={totalVolume}
             onFinish={() => setShowFinish(true)}
           />
           {restStartedAt != null ? (
@@ -358,8 +370,13 @@ export default function ActiveWorkoutV2() {
             { paddingBottom: bottomSpacerHeight },
           ]}
           ListEmptyComponent={
-            <View style={styles.empty}>
-              <Text style={styles.emptyText}>
+            <View
+              style={[
+                styles.empty,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              ]}
+            >
+              <Text style={[styles.emptyText, { color: t.textTertiary }]}>
                 No exercises yet — tap Add exercise to start logging sets.
               </Text>
             </View>
@@ -376,6 +393,7 @@ export default function ActiveWorkoutV2() {
           duration={formatWorkoutDuration(elapsedSeconds)}
           doneSets={doneSets}
           volumeLb={totalVolume}
+          exercises={state.exercises}
           saving={saving}
           onClose={() => setShowFinish(false)}
           onSave={handleSave}
@@ -418,12 +436,9 @@ export default function ActiveWorkoutV2() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: DS.bg,
   },
   flex: { flex: 1 },
-  stickyHeader: {
-    backgroundColor: DS.bg,
-  },
+  stickyHeader: {},
   listContent: {
     paddingTop: 12,
     paddingBottom: 0,
@@ -437,10 +452,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: 'rgba(16, 185, 129, 0.05)',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
     borderRadius: 16,
     paddingVertical: 16,
   },
@@ -450,7 +463,6 @@ const styles = StyleSheet.create({
   addCtaLabel: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.accent,
   },
   discardBtn: {
     marginHorizontal: 20,
@@ -466,8 +478,6 @@ const styles = StyleSheet.create({
   empty: {
     marginHorizontal: 20,
     marginBottom: 12,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 28,
@@ -476,7 +486,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     lineHeight: 17,
   },

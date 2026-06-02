@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import { alphaize } from '../../lib/tokens';
 import type { DailyBurnDay } from '../../lib/healthkit-types';
 
 type Props = {
@@ -16,6 +18,7 @@ type Props = {
  * visible. A dashed line marks the average; bars stagger in left-to-right.
  */
 export default function DailyBurnChart({ days, resetKey }: Props) {
+  const t = useTokens();
   const max = useMemo(
     () => Math.max(1, ...days.map((d) => d.cal)),
     [days],
@@ -36,13 +39,21 @@ export default function DailyBurnChart({ days, resetKey }: Props) {
           <>
             <View
               pointerEvents="none"
-              style={[styles.avgLine, { top: `${avgTop}%` }]}
+              style={[
+                styles.avgLine,
+                { top: `${avgTop}%`, borderColor: t.primaryTintBorder },
+              ]}
             />
             <View
               pointerEvents="none"
-              style={[styles.avgLabelWrap, { top: `${avgTop}%` }]}
+              style={[
+                styles.avgLabelWrap,
+                { top: `${avgTop}%`, backgroundColor: t.bgCard },
+              ]}
             >
-              <Text style={[styles.avgLabel, Tabular]}>
+              <Text
+                style={[styles.avgLabel, { color: t.primary }, Tabular]}
+              >
                 avg {avg.toLocaleString()}
               </Text>
             </View>
@@ -58,13 +69,15 @@ export default function DailyBurnChart({ days, resetKey }: Props) {
 
       {/* Date axis */}
       <View style={styles.axisRow}>
-        <Text style={styles.axisLabel}>{days[0]?.label ?? ''}</Text>
+        <Text style={[styles.axisLabel, { color: t.chartAxisLabel }]}>
+          {days[0]?.label ?? ''}
+        </Text>
         {days.length > 14 ? (
-          <Text style={styles.axisLabel}>
+          <Text style={[styles.axisLabel, { color: t.chartAxisLabel }]}>
             {days[Math.floor(days.length / 2)]?.label ?? ''}
           </Text>
         ) : null}
-        <Text style={[styles.axisLabel, styles.axisLabelAccent]}>Today</Text>
+        <Text style={[styles.axisLabel, { color: t.primary }]}>Today</Text>
       </View>
     </View>
   );
@@ -79,6 +92,7 @@ function Bar({
   max: number;
   index: number;
 }) {
+  const t = useTokens();
   const height = useRef(new Animated.Value(0)).current;
   const targetPct = Math.max(0.04, day.cal / max);
 
@@ -105,22 +119,33 @@ function Bar({
             height: heightStyle,
             minHeight: day.cal > 0 ? 4 : 0,
           },
-          day.isToday && styles.barToday,
+          day.isToday && {
+            shadowColor: t.primary,
+            shadowOpacity: 0.5,
+            shadowOffset: { width: 0, height: 0 },
+            shadowRadius: 8,
+          },
         ]}
       >
         <LinearGradient
+          // Bar fills derive from t.primary so they swap to rose in
+          // Sakura. Today uses the full gradient stops; workout days are
+          // a 0.8→0.5 alpha wash; rest days a 0.25→0.10 wash. Same
+          // intensity ramp in either theme.
           colors={
             day.isToday
-              ? [DS.accent, '#059669']
+              ? [t.primaryGradientStart, t.primaryGradientEnd]
               : day.isWorkout
-                ? ['rgba(16, 185, 129, 0.8)', 'rgba(16, 185, 129, 0.5)']
-                : ['rgba(16, 185, 129, 0.25)', 'rgba(16, 185, 129, 0.1)']
+                ? [alphaize(t.primary, 0.8), alphaize(t.primary, 0.5)]
+                : [alphaize(t.primary, 0.25), alphaize(t.primary, 0.1)]
           }
           style={styles.gradientFill}
         />
         {day.isToday ? (
           <View style={styles.todayLabelWrap}>
-            <Text style={[styles.todayLabel, Tabular]}>{day.cal}</Text>
+            <Text style={[styles.todayLabel, { color: t.primary }, Tabular]}>
+              {day.cal}
+            </Text>
           </View>
         ) : null}
       </Animated.View>
@@ -141,20 +166,17 @@ const styles = StyleSheet.create({
     right: 0,
     borderTopWidth: 1,
     borderStyle: 'dashed',
-    borderColor: 'rgba(16, 185, 129, 0.3)',
   },
   avgLabelWrap: {
     position: 'absolute',
     right: 0,
     marginTop: -10,
     paddingHorizontal: 4,
-    backgroundColor: DS.surface,
     borderRadius: 4,
   },
   avgLabel: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: DS.accent,
   },
   barsRow: {
     position: 'absolute',
@@ -178,12 +200,6 @@ const styles = StyleSheet.create({
     overflow: 'visible',
     position: 'relative',
   },
-  barToday: {
-    shadowColor: DS.accent,
-    shadowOpacity: 0.5,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 8,
-  },
   gradientFill: {
     position: 'absolute',
     top: 0,
@@ -203,7 +219,6 @@ const styles = StyleSheet.create({
   todayLabel: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: DS.accent,
   },
   axisRow: {
     flexDirection: 'row',
@@ -212,9 +227,5 @@ const styles = StyleSheet.create({
   axisLabel: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: DS.textQuaternary,
-  },
-  axisLabelAccent: {
-    color: DS.accent,
   },
 });

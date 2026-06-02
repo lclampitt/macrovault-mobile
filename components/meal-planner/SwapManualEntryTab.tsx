@@ -7,7 +7,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { SwapPayload } from '../../hooks/useMealPlanMutations';
 
 type Props = {
@@ -27,6 +28,7 @@ const FIELDS: { key: FieldKey; label: string }[] = [
 const EMPTY = { calories: '', protein: '', carbs: '', fat: '' };
 
 export default function SwapManualEntryTab({ saving, onAdd }: Props) {
+  const t = useTokens();
   const [form, setForm] = useState<Record<FieldKey, string>>(EMPTY);
   const [mealName, setMealName] = useState('');
   const [ingredients, setIngredients] = useState('');
@@ -46,26 +48,37 @@ export default function SwapManualEntryTab({ saving, onAdd }: Props) {
     });
   }
 
+  const inputStyle = [
+    styles.input,
+    {
+      backgroundColor: t.bgInput,
+      borderColor: t.borderDefault,
+      color: t.textPrimary,
+    },
+  ];
+
   return (
     <View style={styles.wrap}>
       <TextInput
-        style={styles.input}
+        style={inputStyle}
         value={mealName}
         onChangeText={setMealName}
         placeholder="Meal name (e.g. Chicken & Rice)"
-        placeholderTextColor={Colors.textHint}
+        placeholderTextColor={t.textQuaternary}
         maxLength={120}
       />
       <View style={styles.grid}>
         {FIELDS.map(({ key, label }) => (
           <View key={key} style={styles.field}>
-            <Text style={styles.fieldLabel}>{label}</Text>
+            <Text style={[styles.fieldLabel, { color: t.textTertiary }]}>
+              {label}
+            </Text>
             <TextInput
-              style={styles.input}
+              style={inputStyle}
               value={form[key]}
               onChangeText={(v) => setForm((f) => ({ ...f, [key]: v }))}
               placeholder="0"
-              placeholderTextColor={Colors.textHint}
+              placeholderTextColor={t.textQuaternary}
               keyboardType="numeric"
               inputMode={key === 'calories' ? 'numeric' : 'decimal'}
             />
@@ -73,24 +86,31 @@ export default function SwapManualEntryTab({ saving, onAdd }: Props) {
         ))}
       </View>
       <TextInput
-        style={[styles.input, styles.ingredients]}
+        style={[inputStyle, styles.ingredients]}
         value={ingredients}
         onChangeText={setIngredients}
         placeholder="Ingredients (optional)"
-        placeholderTextColor={Colors.textHint}
+        placeholderTextColor={t.textQuaternary}
         multiline
         numberOfLines={3}
       />
       <Pressable
         onPress={handleAdd}
         disabled={!canSubmit}
-        style={[styles.addBtn, !canSubmit && styles.addBtnDisabled]}
+        style={[
+          styles.addBtn,
+          { backgroundColor: t.primary },
+          t.shadowPrimaryGlow,
+          !canSubmit && styles.addBtnDisabled,
+        ]}
         accessibilityRole="button"
       >
         {saving ? (
-          <ActivityIndicator size="small" color="#fff" />
+          <ActivityIndicator size="small" color={t.textOnPrimary} />
         ) : (
-          <Text style={styles.addBtnText}>Add to plan</Text>
+          <Text style={[styles.addBtnText, { color: t.textOnPrimary }]}>
+            Add to plan
+          </Text>
         )}
       </Pressable>
     </View>
@@ -112,17 +132,15 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   fieldLabel: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 11,
   },
   input: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    color: Colors.textPrimary,
+    fontFamily: Font.medium,
     fontSize: 13,
   },
   ingredients: {
@@ -131,17 +149,17 @@ const styles = StyleSheet.create({
   },
   addBtn: {
     marginTop: 4,
-    backgroundColor: Colors.accent,
     borderRadius: 11,
-    paddingVertical: 11,
+    paddingVertical: 12,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   addBtnDisabled: {
     opacity: 0.5,
   },
   addBtnText: {
-    color: '#fff',
-    fontSize: 13,
-    fontWeight: '700',
+    fontFamily: Font.bold,
+    fontSize: 14,
+    letterSpacing: -0.2,
   },
 });

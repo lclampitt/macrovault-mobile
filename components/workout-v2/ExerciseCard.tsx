@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import {
+  AlertCircle,
   BarChart3,
   Edit3,
   FileText,
@@ -8,12 +10,18 @@ import {
   MoreHorizontal,
   Plus,
   RefreshCw,
+  RotateCcw,
+  SkipForward,
   Trash2,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import type { Tokens } from '../../lib/tokens';
 import type { ActiveExercise } from '../../lib/active-workout-context';
 import SetRow from './SetRow';
+
+const HINT_COLOR = '#A87C5E';
 
 type Props = {
   exercise: ActiveExercise;
@@ -29,6 +37,9 @@ type Props = {
   onViewHistory: () => void;
   onRemove: () => void;
   onShowMetrics: () => void;
+  /** Toggles the per-session skipped flag. Wired to the kebab menu's Skip
+   *  item AND the whole skipped-card tap-to-resume affordance. */
+  onToggleSkipped: () => void;
   /** Drag handle binding from react-native-draggable-flatlist. */
   drag?: () => void;
 };
@@ -49,16 +60,44 @@ export default function ExerciseCard({
   onViewHistory,
   onRemove,
   onShowMetrics,
+  onToggleSkipped,
   drag,
 }: Props) {
+  const t = useTokens();
   const doneSetCount = exercise.sets.filter((s) => s.completed).length;
   const totalSetCount = exercise.sets.length;
   const allDone = totalSetCount > 0 && doneSetCount === totalSetCount;
   const someDone = doneSetCount > 0;
+  const isSkipped = !!exercise.skipped;
+  // "Last: skipped" hint shows ONLY when the previous session skipped this
+  // exercise AND the user hasn't done anything in the current session yet
+  // (no sets logged, not already skipped). Logging a set or re-skipping
+  // hides the hint per spec.
+  const showSkippedHint =
+    !!exercise.skippedLastTime && !isSkipped && doneSetCount === 0;
 
   return (
     <View style={styles.outer}>
-      <View style={styles.card}>
+      <Pressable
+        // Tap anywhere on the skipped card to resume. We don't disable the
+        // pressable in non-skipped mode because the inner sets/menus need
+        // their own touch handling — but we no-op the tap there.
+        onPress={isSkipped ? onToggleSkipped : undefined}
+        style={[
+          styles.card,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          isSkipped && {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+        accessibilityRole={isSkipped ? 'button' : undefined}
+        accessibilityLabel={
+          isSkipped
+            ? `${exercise.name} skipped. Tap to resume.`
+            : undefined
+        }
+      >
         {/* Header */}
         <View style={styles.headerRow}>
           <View style={styles.headerLeft}>
@@ -71,107 +110,196 @@ export default function ExerciseCard({
             >
               <GripVertical
                 size={16}
-                color={DS.textQuaternary}
+                color={t.textQuaternary}
                 strokeWidth={2}
               />
             </Pressable>
             <View style={styles.titleCol}>
-              <Text
-                style={[
-                  styles.title,
-                  { color: allDone ? DS.accent : DS.text },
-                ]}
-                numberOfLines={1}
-              >
-                {exercise.name}
-              </Text>
+              <View style={styles.titleInline}>
+                <Text
+                  style={[
+                    styles.title,
+                    { color: allDone ? t.primary : t.textPrimary },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {exercise.name}
+                </Text>
+                {showSkippedHint ? (
+                  // Reanimated FadeOut on unmount makes the hint dissolve
+                  // (0.3s ease-out) when the user logs a set rather than
+                  // popping out of the layout.
+                  <Animated.View
+                    entering={FadeIn.duration(200)}
+                    exiting={FadeOut.duration(300)}
+                    style={styles.hintBadge}
+                    accessibilityLabel="Skipped in previous session"
+                  >
+                    <AlertCircle size={10} color={HINT_COLOR} strokeWidth={2.5} />
+                    <Text style={styles.hintBadgeText}>Last: skipped</Text>
+                  </Animated.View>
+                ) : null}
+              </View>
               <View style={styles.metaRow}>
-                <Text style={styles.muscleLabel}>EXERCISE</Text>
-                <Text style={styles.metaDot}>·</Text>
+                <Text style={[styles.muscleLabel, { color: t.textTertiary }]}>EXERCISE</Text>
+                <Text style={[styles.metaDot, { color: t.textQuaternary }]}>·</Text>
                 <Text
                   style={[
                     styles.setCount,
                     Tabular,
-                    { color: someDone ? DS.accent : DS.textTertiary },
+                    { color: someDone ? t.primary : t.textTertiary },
                   ]}
                 >
-                  {doneSetCount}/{totalSetCount} sets
+                  {totalSetCount} sets
                 </Text>
               </View>
             </View>
           </View>
-          <View style={styles.headerActions}>
-            <Pressable
-              onPress={onShowMetrics}
-              style={({ pressed }) => [
-                styles.menuBtn,
-                pressed && styles.menuBtnActive,
+          {isSkipped ? (
+            // SKIPPED badge replaces the chart + kebab cluster.
+            <View
+              style={[
+                styles.skippedBadge,
+                {
+                  backgroundColor: t.primaryTintBg,
+                  borderColor: t.primaryBorderStrong,
+                  shadowColor: t.primary,
+                },
               ]}
-              accessibilityRole="button"
-              accessibilityLabel="Exercise metrics"
+              accessibilityLabel="Skipped this session"
             >
-              <BarChart3
-                size={14}
-                color={DS.textSecondary}
-                strokeWidth={2}
-              />
-            </Pressable>
-          </View>
-          <View style={styles.menuWrap}>
-            <Pressable
-              onPress={onOpenMenu}
-              style={({ pressed }) => [
-                styles.menuBtn,
-                (isMenuOpen || pressed) && styles.menuBtnActive,
-              ]}
-              accessibilityRole="button"
-              accessibilityLabel="Exercise options"
-              accessibilityState={{ expanded: isMenuOpen }}
-            >
-              <MoreHorizontal
-                size={14}
-                color={DS.textSecondary}
-                strokeWidth={2}
-              />
-            </Pressable>
-            {isMenuOpen ? (
-              <View style={styles.menu} accessibilityRole="menu">
-                <MenuItem Icon={Edit3} label="Rename" onPress={onRename} />
-                <MenuItem
-                  Icon={RefreshCw}
-                  label="Replace exercise"
-                  onPress={onReplace}
-                />
-                <MenuItem
-                  Icon={FileText}
-                  label="Add note"
-                  onPress={onAddNote}
-                />
-                <MenuItem
-                  Icon={History}
-                  label="View history"
-                  onPress={onViewHistory}
-                />
-                <View style={styles.menuDivider} />
-                <MenuItem
-                  Icon={Trash2}
-                  label="Remove"
-                  color={DESTRUCTIVE}
-                  onPress={onRemove}
-                />
+              <SkipForward size={12} color={t.primary} strokeWidth={2.5} />
+              <Text style={[styles.skippedBadgeText, { color: t.primary }]}>SKIPPED</Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.headerActions}>
+                <Pressable
+                  onPress={onShowMetrics}
+                  style={({ pressed }) => [
+                    styles.menuBtn,
+                    { backgroundColor: t.bgCardElevated },
+                    pressed && { backgroundColor: t.borderDefault },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Exercise metrics"
+                >
+                  <BarChart3
+                    size={14}
+                    color={t.textSecondary}
+                    strokeWidth={2}
+                  />
+                </Pressable>
               </View>
-            ) : null}
-          </View>
+              <View style={styles.menuWrap}>
+                <Pressable
+                  onPress={onOpenMenu}
+                  style={({ pressed }) => [
+                    styles.menuBtn,
+                    { backgroundColor: t.bgCardElevated },
+                    (isMenuOpen || pressed) && { backgroundColor: t.borderDefault },
+                    isMenuOpen && {
+                      backgroundColor: t.primaryTintBg,
+                      borderWidth: 1,
+                      borderColor: t.primaryBorderStrong,
+                    },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Exercise options"
+                  accessibilityState={{ expanded: isMenuOpen }}
+                >
+                  <MoreHorizontal
+                    size={14}
+                    color={isMenuOpen ? t.primary : t.textSecondary}
+                    strokeWidth={2}
+                  />
+                </Pressable>
+                {isMenuOpen ? (
+                  <View
+                    style={[
+                      styles.menu,
+                      { backgroundColor: t.bgCardElevated, borderColor: t.borderStrong },
+                    ]}
+                    accessibilityRole="menu"
+                  >
+                    {/* Skip exercise — first item, emerald-tinted with
+                        "This session" trailing microtype. */}
+                    <Pressable
+                      onPress={onToggleSkipped}
+                      style={({ pressed }) => [
+                        styles.menuItem,
+                        styles.menuItemSkip,
+                        { backgroundColor: t.primaryTintBg },
+                        pressed && { backgroundColor: t.primaryTintBorder },
+                      ]}
+                      accessibilityRole="menuitem"
+                      accessibilityLabel={`Skip ${exercise.name} for this session`}
+                    >
+                      <SkipForward
+                        size={14}
+                        color={t.primary}
+                        strokeWidth={2.5}
+                      />
+                      <Text style={[styles.menuItemSkipText, { color: t.primary }]}>
+                        Skip exercise
+                      </Text>
+                      <Text style={[styles.menuItemSkipTrailing, { color: t.primary }]}>
+                        This session
+                      </Text>
+                    </Pressable>
+                    <View style={[styles.menuDivider, { backgroundColor: t.borderStrong }]} />
+                    <MenuItem
+                      tokens={t}
+                      Icon={Edit3}
+                      label="Rename"
+                      onPress={onRename}
+                    />
+                    <MenuItem
+                      tokens={t}
+                      Icon={RefreshCw}
+                      label="Replace exercise"
+                      onPress={onReplace}
+                    />
+                    <MenuItem
+                      tokens={t}
+                      Icon={FileText}
+                      label="Add note"
+                      onPress={onAddNote}
+                    />
+                    <MenuItem
+                      tokens={t}
+                      Icon={History}
+                      label="View history"
+                      onPress={onViewHistory}
+                    />
+                    <View style={[styles.menuDivider, { backgroundColor: t.borderStrong }]} />
+                    <MenuItem
+                      tokens={t}
+                      Icon={Trash2}
+                      label="Remove from template"
+                      color={DESTRUCTIVE}
+                      onPress={onRemove}
+                    />
+                  </View>
+                ) : null}
+              </View>
+            </>
+          )}
         </View>
 
+        {/* Body — dimmed and non-interactive when skipped */}
+        <View
+          style={isSkipped ? styles.bodyDimmed : undefined}
+          pointerEvents={isSkipped ? 'none' : 'auto'}
+        >
         {/* Column headers */}
         <View style={styles.colHeaders}>
           <View style={styles.colHdrNum}>
-            <Text style={styles.colHdrText}>SET</Text>
+            <Text style={[styles.colHdrText, { color: t.textTertiary }]}>SET</Text>
           </View>
-          <Text style={[styles.colHdrText, styles.colHdrLast]}>LAST</Text>
-          <Text style={[styles.colHdrText, styles.colHdrWeight]}>LBS</Text>
-          <Text style={[styles.colHdrText, styles.colHdrReps]}>REPS</Text>
+          <Text style={[styles.colHdrText, styles.colHdrLast, { color: t.textTertiary }]}>LAST</Text>
+          <Text style={[styles.colHdrText, styles.colHdrWeight, { color: t.textTertiary }]}>LBS</Text>
+          <Text style={[styles.colHdrText, styles.colHdrReps, { color: t.textTertiary }]}>REPS</Text>
           <View style={styles.colHdrCheck} />
         </View>
 
@@ -209,38 +337,56 @@ export default function ExerciseCard({
           onPress={onAddSet}
           style={({ pressed }) => [
             styles.addSetBtn,
+            { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
             pressed && styles.pressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel="Add set"
         >
-          <Plus size={12} color={DS.accent} strokeWidth={2.5} />
-          <Text style={styles.addSetText}>Add set</Text>
+          <Plus size={12} color={t.primary} strokeWidth={2.5} />
+          <Text style={[styles.addSetText, { color: t.primary }]}>Add set</Text>
         </Pressable>
 
         {exercise.note ? (
-          <View style={styles.noteBox}>
-            <Text style={styles.noteText}>{exercise.note}</Text>
+          <View
+            style={[
+              styles.noteBox,
+              { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+            ]}
+          >
+            <Text style={[styles.noteText, { color: t.textSecondary }]}>
+              {exercise.note}
+            </Text>
           </View>
         ) : null}
-      </View>
+        </View>
+
+        {isSkipped ? (
+          <View style={[styles.resumeHint, { borderTopColor: t.primaryTintBorder }]}>
+            <RotateCcw size={12} color={t.primary} strokeWidth={2.5} />
+            <Text style={[styles.resumeHintText, { color: t.primary }]}>Tap card to resume</Text>
+          </View>
+        ) : null}
+      </Pressable>
     </View>
   );
 }
 
 function MenuItem({
+  tokens: t,
   Icon,
   label,
   color,
   onPress,
 }: {
+  tokens: Tokens;
   Icon: LucideIcon;
   label: string;
   color?: string;
   onPress: () => void;
 }) {
-  const tint = color ?? DS.text;
-  const iconTint = color ?? DS.textSecondary;
+  const tint = color ?? t.textPrimary;
+  const iconTint = color ?? t.textSecondary;
   return (
     <Pressable
       onPress={onPress}
@@ -263,8 +409,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   card: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 14,
@@ -308,11 +452,9 @@ const styles = StyleSheet.create({
   muscleLabel: {
     fontFamily: Font.semibold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.6,
   },
   metaDot: {
-    color: DS.textDimmest,
     fontSize: 9,
   },
   setCount: {
@@ -326,12 +468,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    backgroundColor: '#0F0F0F',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  menuBtnActive: {
-    backgroundColor: DS.border,
   },
   menu: {
     position: 'absolute',
@@ -339,8 +477,6 @@ const styles = StyleSheet.create({
     top: 36,
     zIndex: 50,
     minWidth: 180,
-    backgroundColor: '#141414',
-    borderColor: '#2A2A2A',
     borderWidth: 1,
     borderRadius: 12,
     paddingVertical: 4,
@@ -368,7 +504,6 @@ const styles = StyleSheet.create({
     height: 1,
     marginHorizontal: 8,
     marginVertical: 4,
-    backgroundColor: '#2A2A2A',
   },
   colHeaders: {
     flexDirection: 'row',
@@ -384,7 +519,6 @@ const styles = StyleSheet.create({
   colHdrText: {
     fontFamily: Font.bold,
     fontSize: 8,
-    color: '#555',
     letterSpacing: 0.8,
   },
   colHdrLast: {
@@ -409,8 +543,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -423,21 +555,90 @@ const styles = StyleSheet.create({
   addSetText: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
   },
   noteBox: {
     marginTop: 10,
     paddingHorizontal: 10,
     paddingVertical: 8,
-    backgroundColor: DS.surfaceFlat,
     borderRadius: 8,
-    borderColor: DS.border,
     borderWidth: 1,
   },
   noteText: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
     lineHeight: 15,
+  },
+  // Skipped state
+  skippedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    shadowOpacity: 0.4,
+    shadowOffset: { width: 0, height: 0 },
+    shadowRadius: 12,
+  },
+  skippedBadgeText: {
+    fontFamily: Font.bold,
+    fontSize: 10,
+    letterSpacing: 1,
+  },
+  bodyDimmed: {
+    opacity: 0.35,
+  },
+  resumeHint: {
+    marginTop: 12,
+    paddingTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderTopWidth: 1,
+  },
+  resumeHintText: {
+    fontFamily: Font.bold,
+    fontSize: 10,
+    letterSpacing: 0.2,
+  },
+  // Inline "Last: skipped" hint in header
+  titleInline: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  hintBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: 'rgba(168, 124, 94, 0.12)',
+    borderColor: 'rgba(168, 124, 94, 0.25)',
+    borderWidth: 1,
+  },
+  hintBadgeText: {
+    fontFamily: Font.bold,
+    fontSize: 9,
+    color: HINT_COLOR,
+  },
+  // Kebab Skip item (first menu entry, emerald-tinted)
+  menuItemSkip: {
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  menuItemSkipText: {
+    flex: 1,
+    fontFamily: Font.bold,
+    fontSize: 11,
+  },
+  menuItemSkipTrailing: {
+    fontFamily: Font.medium,
+    fontSize: 9,
+    opacity: 0.6,
   },
 });

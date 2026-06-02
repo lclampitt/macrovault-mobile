@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { ArrowUpRight, Flame } from 'lucide-react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import Card from '../ds/Card';
 import MiniBars from '../ds/MiniBars';
 
@@ -37,6 +38,7 @@ export default function CaloriesBurnedTile({
   data,
   initialRange = '7d',
 }: Props) {
+  const t = useTokens();
   const [range, setRange] = useState<BurnRange>(initialRange);
   const series = data[range];
 
@@ -45,21 +47,32 @@ export default function CaloriesBurnedTile({
       {/* Header */}
       <View style={styles.headerRow}>
         <View style={styles.headerLeft}>
-          <Flame size={12} color={DS.accent} strokeWidth={2.5} />
-          <Text style={styles.label}>BURNED</Text>
+          <Flame size={12} color={t.primary} strokeWidth={2.5} />
+          <Text style={[styles.label, { color: t.textTertiary }]}>BURNED</Text>
         </View>
-        <ArrowUpRight size={14} color={DS.accent} strokeWidth={2.5} />
+        <ArrowUpRight size={14} color={t.primary} strokeWidth={2.5} />
       </View>
 
       {/* Segmented range toggle */}
-      <View style={styles.segments}>
+      <View
+        style={[
+          styles.segments,
+          {
+            backgroundColor: t.bgCardElevated,
+            borderColor: t.borderDefault,
+          },
+        ]}
+      >
         {RANGES.map((r) => {
           const active = range === r.key;
           return (
             <Pressable
               key={r.key}
               onPress={() => setRange(r.key)}
-              style={[styles.segment, active && styles.segmentActive]}
+              style={[
+                styles.segment,
+                active && { backgroundColor: t.primary },
+              ]}
               accessibilityRole="button"
               accessibilityState={{ selected: active }}
               accessibilityLabel={r.label}
@@ -67,7 +80,7 @@ export default function CaloriesBurnedTile({
               <Text
                 style={[
                   styles.segmentText,
-                  active && styles.segmentTextActive,
+                  { color: active ? t.textOnPrimary : t.textTertiary },
                 ]}
               >
                 {r.label}
@@ -80,11 +93,13 @@ export default function CaloriesBurnedTile({
       {/* Value + bars — re-mount on range change so FadeIn replays. */}
       <Animated.View key={range} entering={FadeIn.duration(250)}>
         <View style={styles.valueRow}>
-          <Text style={[styles.value, Tabular]}>{fmtNumber(series.value)}</Text>
-          <Text style={styles.unit}>kcal</Text>
+          <Text style={[styles.value, Tabular, { color: t.textPrimary }]}>
+            {fmtNumber(series.value)}
+          </Text>
+          <Text style={[styles.unit, { color: t.textSecondary }]}>kcal</Text>
         </View>
-        <Text style={[styles.meta, Tabular]}>
-          <Text style={{ color: DS.accent }}>{series.delta}</Text>{' '}
+        <Text style={[styles.meta, Tabular, { color: t.textSecondary }]}>
+          <Text style={{ color: t.primary }}>{series.delta}</Text>{' '}
           {series.deltaLabel}
         </Text>
         <View style={styles.barsWrap}>
@@ -116,19 +131,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   label: {
-    fontFamily: Font.semibold,
+    fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textSecondary,
     letterSpacing: 0.6,
   },
   segments: {
     flexDirection: 'row',
     gap: 2,
     padding: 2,
-    borderRadius: Radius.cardCompact - 4, // ~8
-    backgroundColor: DS.surfaceFlat,
+    borderRadius: Radius.cardCompact - 4,
     borderWidth: 1,
-    borderColor: DS.border,
     marginBottom: 10,
   },
   segment: {
@@ -138,16 +150,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  segmentActive: {
-    backgroundColor: DS.accent,
-  },
   segmentText: {
-    fontFamily: Font.semibold,
+    fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
-  },
-  segmentTextActive: {
-    color: '#000',
   },
   valueRow: {
     flexDirection: 'row',
@@ -157,18 +162,15 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: Font.bold,
     fontSize: 26,
-    color: DS.text,
     letterSpacing: -0.6,
   },
   unit: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   meta: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
     marginTop: 6,
   },
   barsWrap: {

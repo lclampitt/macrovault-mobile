@@ -32,30 +32,47 @@ import type {
 // Fitness screen renders empty-state cards.
 // --------------------------------------------------------------------------
 
+// The package uses flat named exports. We pull only what we need and keep
+// everything `any`-typed at the boundary so the hook stays compileable on
+// Android / web (where the module isn't present).
+type AuthRequest = { toRead?: readonly string[]; toShare?: readonly string[] };
+
 type HealthKitModule = {
-  isHealthDataAvailable: () => Promise<boolean>;
-  requestAuthorization: (read: string[], write: string[]) => Promise<boolean>;
+  isHealthDataAvailable?: () => boolean;
+  requestAuthorization?: (req: AuthRequest) => Promise<boolean>;
   queryStatisticsForQuantity?: (
-    type: string,
-    options: string[],
-    start: Date,
-    end: Date,
-  ) => Promise<{ sumQuantity?: { quantity: number }; averageQuantity?: { quantity: number } } | null>;
+    identifier: string,
+    statistics: readonly string[],
+    options?: { filter?: { startDate?: Date; endDate?: Date }; unit?: string },
+  ) => Promise<{
+    sumQuantity?: { quantity: number };
+    averageQuantity?: { quantity: number };
+    minimumQuantity?: { quantity: number };
+    maximumQuantity?: { quantity: number };
+  }>;
   queryQuantitySamples?: (
-    type: string,
-    options: { from?: Date; to?: Date; limit?: number },
-  ) => Promise<Array<{ quantity: number; startDate: Date; endDate: Date }>>;
-  queryWorkouts?: (options: {
-    from?: Date;
-    to?: Date;
-  }) => Promise<Array<{ startDate: Date; endDate: Date; totalEnergyBurned?: { quantity: number } }>>;
+    identifier: string,
+    options: { filter?: { startDate?: Date; endDate?: Date }; limit?: number; unit?: string; ascending?: boolean },
+  ) => Promise<ReadonlyArray<{ quantity: number; startDate: Date; endDate: Date }>>;
+  queryWorkoutSamples?: (options: {
+    filter?: { startDate?: Date; endDate?: Date };
+    limit?: number;
+    ascending?: boolean;
+  }) => Promise<ReadonlyArray<{ startDate: Date; endDate: Date; totalEnergyBurned?: { quantity: number } }>>;
 };
 
 let HealthKit: HealthKitModule | null = null;
 try {
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const mod = require('@kingstinct/react-native-healthkit');
-  HealthKit = (mod?.default ?? mod) as HealthKitModule;
+  // Flat named exports — copy the functions we use onto a small surface.
+  HealthKit = {
+    isHealthDataAvailable: mod.isHealthDataAvailable,
+    requestAuthorization: mod.requestAuthorization,
+    queryStatisticsForQuantity: mod.queryStatisticsForQuantity,
+    queryQuantitySamples: mod.queryQuantitySamples,
+    queryWorkoutSamples: mod.queryWorkoutSamples,
+  };
 } catch {
   HealthKit = null;
 }
@@ -288,37 +305,39 @@ async function fetchHealthKit(month: Date, range: BurnRange): Promise<Partial<Fi
   try {
     const monthStart = startOfMonth(month);
     const monthEnd = endOfMonth(month);
+    const monthFilter = { startDate: monthStart, endDate: monthEnd };
 
     // Active + basal monthly totals
     const [active, basal] = await Promise.all([
       HealthKit.queryStatisticsForQuantity?.(
         'HKQuantityTypeIdentifierActiveEnergyBurned',
         ['cumulativeSum'],
-        monthStart,
-        monthEnd,
+        { filter: monthFilter },
       ),
       HealthKit.queryStatisticsForQuantity?.(
         'HKQuantityTypeIdentifierBasalEnergyBurned',
         ['cumulativeSum'],
-        monthStart,
-        monthEnd,
+        { filter: monthFilter },
       ),
     ]);
     const activeCal = Math.round(active?.sumQuantity?.quantity ?? 0);
     const basalCal = Math.round(basal?.sumQuantity?.quantity ?? 0);
 
     // Workouts
-    const hkWorkouts = (await HealthKit.queryWorkouts?.({ from: monthStart, to: monthEnd })) ?? [];
+    const hkWorkouts =
+      (await HealthKit.queryWorkoutSamples?.({ filter: monthFilter, ascending: true })) ?? [];
     const totalSeconds = hkWorkouts.reduce(
       (sum, w) => sum + Math.max(0, (w.endDate.getTime() - w.startDate.getTime()) / 1000),
       0,
     );
 
     // Resting HR — latest sample + 30-day-prior sample for delta
-    const restingSamples = (await HealthKit.queryQuantitySamples?.(
-      'HKQuantityTypeIdentifierRestingHeartRate',
-      { from: addDays(new Date(), -45), to: new Date(), limit: 50 },
-    )) ?? [];
+    const restingSamples =
+      (await HealthKit.queryQuantitySamples?.('HKQuantityTypeIdentifierRestingHeartRate', {
+        filter: { startDate: addDays(new Date(), -45), endDate: new Date() },
+        limit: 50,
+        ascending: true,
+      })) ?? [];
     const latestResting = restingSamples[restingSamples.length - 1]?.quantity ?? 0;
     const earliest = restingSamples[0]?.quantity ?? latestResting;
     const restingDelta = Math.round(latestResting - earliest);
@@ -333,18 +352,17 @@ async function fetchHealthKit(month: Date, range: BurnRange): Promise<Partial<Fi
       dayStart.setHours(0, 0, 0, 0);
       const dayEnd = new Date(d);
       dayEnd.setHours(23, 59, 59, 999);
+      const dayFilter = { startDate: dayStart, endDate: dayEnd };
       const [a, b] = await Promise.all([
         HealthKit.queryStatisticsForQuantity?.(
           'HKQuantityTypeIdentifierActiveEnergyBurned',
           ['cumulativeSum'],
-          dayStart,
-          dayEnd,
+          { filter: dayFilter },
         ),
         HealthKit.queryStatisticsForQuantity?.(
           'HKQuantityTypeIdentifierBasalEnergyBurned',
           ['cumulativeSum'],
-          dayStart,
-          dayEnd,
+          { filter: dayFilter },
         ),
       ]);
       const total = Math.round((a?.sumQuantity?.quantity ?? 0) + (b?.sumQuantity?.quantity ?? 0));
@@ -363,10 +381,12 @@ async function fetchHealthKit(month: Date, range: BurnRange): Promise<Partial<Fi
     // Heart-rate aggregates during workout windows
     const hrSamples: number[] = [];
     for (const w of hkWorkouts) {
-      const samples = (await HealthKit.queryQuantitySamples?.(
-        'HKQuantityTypeIdentifierHeartRate',
-        { from: w.startDate, to: w.endDate, limit: 5000 },
-      )) ?? [];
+      const samples =
+        (await HealthKit.queryQuantitySamples?.('HKQuantityTypeIdentifierHeartRate', {
+          filter: { startDate: w.startDate, endDate: w.endDate },
+          limit: 5000,
+          ascending: true,
+        })) ?? [];
       for (const s of samples) hrSamples.push(s.quantity);
     }
     const hrMin = hrSamples.length ? Math.round(Math.min(...hrSamples)) : 0;
@@ -482,17 +502,21 @@ export function useHealthKit(): State {
   }, []);
 
   const requestPermissions = useCallback(async (): Promise<HealthKitStatus> => {
-    if (!HealthKit || Platform.OS !== 'ios') {
+    if (!HealthKit?.requestAuthorization || Platform.OS !== 'ios') {
       setStatus('unavailable');
       return 'unavailable';
     }
     try {
-      const ok = await HealthKit.isHealthDataAvailable();
+      // `isHealthDataAvailable` is synchronous in this package.
+      const ok = HealthKit.isHealthDataAvailable?.() ?? true;
       if (!ok) {
         setStatus('unavailable');
         return 'unavailable';
       }
-      const granted = await HealthKit.requestAuthorization(READ_PERMS, WRITE_PERMS);
+      const granted = await HealthKit.requestAuthorization({
+        toRead: READ_PERMS,
+        toShare: WRITE_PERMS,
+      });
       // HealthKit deliberately doesn't tell us if READ was denied. Treat the
       // boolean as write-grant only; we'll know reads work when the query
       // either returns samples or stays empty.

@@ -12,7 +12,8 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { useActiveWorkout } from '../lib/active-workout-context';
-import { DS, Font, Shadow } from './../lib/design-system';
+import { Font } from './../lib/design-system';
+import { useTokens } from '../lib/theme-context';
 
 type TabDef = {
   href: Href;
@@ -41,6 +42,7 @@ export function BottomTabBar({ onOpenMore }: Props) {
   const pathname = usePathname();
   const { state: workoutState } = useActiveWorkout();
   const workoutInProgress = workoutState.exercises.length > 0;
+  const t = useTokens();
 
   // In-progress pulse on the FAB
   const pulse = useRef(new Animated.Value(1)).current;
@@ -64,7 +66,17 @@ export function BottomTabBar({ onOpenMore }: Props) {
     return () => loop.stop();
   }, [workoutInProgress, pulse]);
 
-  const isActive = (href: Href) => pathname === href;
+  // Some routes live "under" a tab even though their URL doesn't match exactly.
+  // Metric history pushes onto the Stats nav stack, so /metric-history/* keeps
+  // the Stats tab highlighted. Add more entries here as nested routes show up.
+  const SECONDARY_TAB_ROUTES: Record<string, string[]> = {
+    '/progress': ['/metric-history'],
+  };
+  const isActive = (href: Href) => {
+    if (pathname === href) return true;
+    const prefixes = SECONDARY_TAB_ROUTES[String(href)] ?? [];
+    return prefixes.some((p) => pathname.startsWith(p));
+  };
 
   const go = (href: Href) => {
     if (pathname === href) return;
@@ -73,7 +85,7 @@ export function BottomTabBar({ onOpenMore }: Props) {
 
   const renderTab = ({ href, label, Icon }: TabDef) => {
     const active = isActive(href);
-    const color = active ? DS.accent : DS.textQuaternary;
+    const color = active ? t.primary : t.textQuaternary;
     return (
       <Pressable
         key={label}
@@ -97,15 +109,16 @@ export function BottomTabBar({ onOpenMore }: Props) {
       style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, 12) }]}
       pointerEvents="box-none"
     >
-      {/* Gradient fade behind the bar so scroll content fades to black. */}
+      {/* Gradient fade behind the bar so scroll content fades into the
+          page background (black in dark, cream in light, rose in sakura). */}
       <LinearGradient
-        colors={['rgba(0,0,0,0)', '#000']}
+        colors={t.gradientBottomNavFade as unknown as readonly [string, string]}
         locations={[0, 0.35]}
         pointerEvents="none"
         style={styles.gradient}
       />
 
-      <View style={styles.barWrap}>
+      <View style={[styles.barWrap, { backgroundColor: t.bgPage }]}>
         <View style={styles.bar}>
           {LEFT_TABS.map(renderTab)}
 
@@ -117,15 +130,41 @@ export function BottomTabBar({ onOpenMore }: Props) {
               pressed && styles.fabPressed,
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Log workout"
+            accessibilityLabel="Start workout"
           >
-            <View style={[styles.fabSquare, Shadow.emeraldGlow]}>
-              <Plus size={26} color="#000" strokeWidth={3} />
+            <View
+              style={[
+                styles.fabSquare,
+                { backgroundColor: t.primary },
+                t.shadowPrimaryGlow,
+              ]}
+            >
+              <Plus size={26} color={t.textOnPrimary} strokeWidth={3} />
               {workoutInProgress ? (
-                <Animated.View style={[styles.pulseDot, { opacity: pulse }]} />
+                <Animated.View
+                  style={[
+                    styles.pulseDot,
+                    {
+                      backgroundColor: t.primary,
+                      borderColor: t.bgPage,
+                      opacity: pulse,
+                    },
+                  ]}
+                />
               ) : null}
             </View>
-            <Text style={styles.fabLabel}>Log</Text>
+            <Text
+              style={[styles.fabLabel, { color: t.primary }]}
+              numberOfLines={1}
+              // Belt-and-braces against the 2-line wrap that was happening
+              // on smaller phones. With size 9 + tightened letterSpacing,
+              // "Start workout" comfortably fits the FAB column width on
+              // every iPhone size; numberOfLines is the final guarantee.
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              Start workout
+            </Text>
           </Pressable>
 
           {RIGHT_TABS.map(renderTab)}
@@ -140,8 +179,8 @@ export function BottomTabBar({ onOpenMore }: Props) {
             accessibilityRole="button"
             accessibilityLabel="More"
           >
-            <Grid3x3 size={20} color={DS.textQuaternary} strokeWidth={2} />
-            <Text style={[styles.tabLabel, { color: DS.textQuaternary }]}>
+            <Grid3x3 size={20} color={t.textQuaternary} strokeWidth={2} />
+            <Text style={[styles.tabLabel, { color: t.textQuaternary }]}>
               More
             </Text>
           </Pressable>
@@ -168,7 +207,7 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   barWrap: {
-    backgroundColor: DS.bg,
+    // backgroundColor inline from tokens
   },
   bar: {
     flexDirection: 'row',
@@ -204,7 +243,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: DS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -215,14 +253,14 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: DS.accentLight,
     borderWidth: 2,
-    borderColor: DS.bg,
   },
   fabLabel: {
     fontFamily: Font.bold,
-    fontSize: 10,
-    color: DS.accent,
+    // 9pt + slight negative tracking — "Start workout" was wrapping to
+    // two lines under the FAB on smaller iPhone screens at the old 10pt.
+    fontSize: 9,
+    letterSpacing: -0.1,
     marginTop: 4,
   },
 });

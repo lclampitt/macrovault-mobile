@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   low: number;
@@ -23,6 +24,7 @@ export default function StatsSummaryBand({
   change,
   decimals = 1,
 }: Props) {
+  const t = useTokens();
   const stats: Array<{ label: string; value: string; isChange?: boolean }> = [
     { label: 'Low', value: fmt(low, decimals) },
     { label: 'High', value: fmt(high, decimals) },
@@ -33,17 +35,18 @@ export default function StatsSummaryBand({
   // Change color: emerald for either direction by default (user intent unknown).
   // Per spec: "for now, treat both directions as positive emerald since we
   // don't know user intent."
-  const changeColor = change === 0 ? DS.textSecondary : DS.accent;
+  const changeColor = change === 0 ? t.textSecondary : t.primary;
 
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, { borderTopColor: t.borderDefault }]}>
       {stats.map((s, i) => (
         <View key={i} style={styles.col}>
-          <Text style={styles.label}>{s.label.toUpperCase()}</Text>
+          <Text style={[styles.label, { color: t.textTertiary }]}>{s.label.toUpperCase()}</Text>
           <Text
             style={[
               styles.value,
               Tabular,
+              { color: t.textPrimary },
               s.isChange ? { color: changeColor } : null,
             ]}
           >
@@ -62,7 +65,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: DS.border,
   },
   col: {
     flex: 1,
@@ -70,13 +72,11 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.semibold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.6,
     marginBottom: 4,
   },
   value: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
 });

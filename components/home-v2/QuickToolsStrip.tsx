@@ -6,7 +6,8 @@ import {
   Target,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Radius } from '../../lib/design-system';
+import { Font, Radius } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Tool = {
   key: string;
@@ -27,10 +28,10 @@ type Props = {
 };
 
 /**
- * 4-up quick tools strip. Spec calls for emerald icon + label in #aaa with
- * subtle active:scale-95 press state.
+ * 4-up quick tools strip. Theme-aware via useTokens.
  */
 export default function QuickToolsStrip({ onToolPress }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.row}>
       {TOOLS.map(({ key, label, Icon }) => (
@@ -39,13 +40,19 @@ export default function QuickToolsStrip({ onToolPress }: Props) {
           onPress={() => onToolPress?.(key)}
           style={({ pressed }) => [
             styles.tile,
+            {
+              backgroundColor: t.bgCard,
+              borderColor: t.borderDefault,
+            },
             pressed && styles.tilePressed,
           ]}
           accessibilityRole="button"
           accessibilityLabel={label}
         >
-          <Icon size={16} color={DS.accent} strokeWidth={2} />
-          <Text style={styles.label}>{label}</Text>
+          <Icon size={16} color={t.primary} strokeWidth={2} />
+          <Text style={[styles.label, { color: t.textSecondary }]}>
+            {label}
+          </Text>
         </Pressable>
       ))}
     </View>
@@ -60,9 +67,7 @@ const styles = StyleSheet.create({
   },
   tile: {
     flex: 1,
-    backgroundColor: DS.surface,
     borderWidth: 1,
-    borderColor: DS.border,
     borderRadius: Radius.cardCompact,
     paddingVertical: 12,
     paddingHorizontal: 8,
@@ -75,6 +80,5 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: '#AAA',
   },
 });

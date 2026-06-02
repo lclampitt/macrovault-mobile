@@ -6,7 +6,8 @@ import {
   Scale,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import Card from '../ds/Card';
 import Sparkline from '../ds/Sparkline';
 
@@ -91,6 +92,7 @@ function HeroCard({
   history,
   secondaryMeta,
 }: HeroProps) {
+  const t = useTokens();
   const Arrow = delta != null && delta > 0 ? ArrowUpRight : ArrowDownRight;
   const showSpark = history.length >= 2;
 
@@ -98,29 +100,29 @@ function HeroCard({
     <Card style={styles.tile}>
       <View style={styles.headerRow}>
         <View style={styles.labelRow}>
-          <Icon size={12} color={DS.accent} strokeWidth={2.5} />
-          <Text style={styles.label}>{label.toUpperCase()}</Text>
+          <Icon size={12} color={t.primary} strokeWidth={2.5} />
+          <Text style={[styles.label, { color: t.textSecondary }]}>{label.toUpperCase()}</Text>
         </View>
         {delta != null ? (
-          <Arrow size={14} color={DS.accent} strokeWidth={2.5} />
+          <Arrow size={14} color={t.primary} strokeWidth={2.5} />
         ) : null}
       </View>
 
       <View style={styles.valueRow}>
-        <Text style={[styles.value, Tabular]}>{value}</Text>
-        <Text style={styles.unit}>{unit}</Text>
+        <Text style={[styles.value, Tabular, { color: t.textPrimary }]}>{value}</Text>
+        <Text style={[styles.unit, { color: t.textSecondary }]}>{unit}</Text>
       </View>
 
       <Text style={[styles.meta, Tabular]}>
         {delta != null ? (
-          <Text style={{ color: DS.accent }}>
+          <Text style={{ color: t.primary }}>
             {fmtDelta(delta, 1)} {deltaUnit}
           </Text>
         ) : (
-          <Text style={{ color: DS.textTertiary }}>No prior entry</Text>
+          <Text style={{ color: t.textTertiary }}>No prior entry</Text>
         )}
         {secondaryMeta ? (
-          <Text style={{ color: DS.textTertiary }}> · {secondaryMeta}</Text>
+          <Text style={{ color: t.textTertiary }}> · {secondaryMeta}</Text>
         ) : null}
       </Text>
 
@@ -160,7 +162,6 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.semibold,
     fontSize: 10,
-    color: DS.textSecondary,
     letterSpacing: 0.6,
   },
   valueRow: {
@@ -171,13 +172,11 @@ const styles = StyleSheet.create({
   value: {
     fontFamily: Font.bold,
     fontSize: 28,
-    color: DS.text,
     letterSpacing: -0.6,
   },
   unit: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   meta: {
     fontFamily: Font.medium,

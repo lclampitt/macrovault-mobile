@@ -1,6 +1,7 @@
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { X } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   visible: boolean;
@@ -31,6 +32,7 @@ export default function PlateCalcModal({
   barWeight = 45,
   onClose,
 }: Props) {
+  const t = useTokens();
   const perSide = (weightLb - barWeight) / 2;
   const plates = perSide > 0 ? computePlates(perSide) : [];
 
@@ -41,47 +43,62 @@ export default function PlateCalcModal({
       animationType="fade"
       onRequestClose={onClose}
     >
-      <Pressable style={styles.backdrop} onPress={onClose}>
+      <Pressable
+        style={[styles.backdrop, { backgroundColor: t.bgOverlay }]}
+        onPress={onClose}
+      >
         <Pressable
-          style={styles.modal}
+          style={[
+            styles.modal,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          ]}
           onPress={(e) => e.stopPropagation()}
         >
           <View style={styles.header}>
-            <Text style={styles.title}>Plate calculator</Text>
+            <Text style={[styles.title, { color: t.textPrimary }]}>Plate calculator</Text>
             <Pressable
               onPress={onClose}
               hitSlop={6}
-              style={styles.closeBtn}
+              style={[
+                styles.closeBtn,
+                { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+              ]}
               accessibilityRole="button"
               accessibilityLabel="Close"
             >
-              <X size={12} color={DS.textSecondary} strokeWidth={2} />
+              <X size={12} color={t.textSecondary} strokeWidth={2} />
             </Pressable>
           </View>
 
-          <View style={styles.weightBlock}>
-            <Text style={styles.label}>TOTAL WEIGHT</Text>
-            <Text style={[styles.weight, Tabular]}>{weightLb}</Text>
-            <Text style={[styles.unit, Tabular]}>
+          <View style={[styles.weightBlock, { borderBottomColor: t.borderDefault }]}>
+            <Text style={[styles.label, { color: t.textTertiary }]}>TOTAL WEIGHT</Text>
+            <Text style={[styles.weight, Tabular, { color: t.textPrimary }]}>{weightLb}</Text>
+            <Text style={[styles.unit, Tabular, { color: t.textSecondary }]}>
               lb · {barWeight} lb bar
             </Text>
           </View>
 
           {perSide > 0 ? (
             <>
-              <Text style={styles.subLabel}>
+              <Text style={[styles.subLabel, { color: t.textTertiary }]}>
                 PER SIDE ({perSide} LB)
               </Text>
               <View style={styles.platesCol}>
                 {plates.map((p) => (
-                  <View key={p.size} style={styles.plateRow}>
+                  <View
+                    key={p.size}
+                    style={[
+                      styles.plateRow,
+                      { backgroundColor: t.bgCardElevated, borderColor: t.borderDefault },
+                    ]}
+                  >
                     <View style={styles.plateLeft}>
-                      <View style={styles.plateBar} />
-                      <Text style={[styles.plateSize, Tabular]}>
+                      <View style={[styles.plateBar, { backgroundColor: t.primary }]} />
+                      <Text style={[styles.plateSize, Tabular, { color: t.textPrimary }]}>
                         {p.size} lb
                       </Text>
                     </View>
-                    <Text style={[styles.plateCount, Tabular]}>
+                    <Text style={[styles.plateCount, Tabular, { color: t.primary }]}>
                       ×{p.count}
                     </Text>
                   </View>
@@ -89,7 +106,9 @@ export default function PlateCalcModal({
               </View>
             </>
           ) : (
-            <Text style={styles.barOnly}>Bar only — no plates needed</Text>
+            <Text style={[styles.barOnly, { color: t.textTertiary }]}>
+              Bar only — no plates needed
+            </Text>
           )}
         </Pressable>
       </Pressable>
@@ -100,7 +119,6 @@ export default function PlateCalcModal({
 const styles = StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 24,
@@ -108,8 +126,6 @@ const styles = StyleSheet.create({
   modal: {
     width: '100%',
     maxWidth: 360,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     padding: 20,
@@ -123,14 +139,11 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
   },
   closeBtn: {
     width: 28,
     height: 28,
     borderRadius: 6,
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
@@ -140,18 +153,15 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
     marginBottom: 16,
     borderBottomWidth: 1,
-    borderBottomColor: DS.border,
   },
   label: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
   },
   weight: {
     fontFamily: Font.bold,
     fontSize: 36,
-    color: DS.text,
     letterSpacing: -0.8,
     lineHeight: 40,
     marginTop: 4,
@@ -159,13 +169,11 @@ const styles = StyleSheet.create({
   unit: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
     marginTop: 2,
   },
   subLabel: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
     marginBottom: 8,
   },
@@ -176,8 +184,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0F0F0F',
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -192,22 +198,18 @@ const styles = StyleSheet.create({
     width: 6,
     height: 22,
     borderRadius: 3,
-    backgroundColor: DS.accent,
   },
   plateSize: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   plateCount: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.accent,
   },
   barOnly: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     paddingVertical: 8,
   },

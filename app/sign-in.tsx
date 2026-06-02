@@ -1,211 +1,332 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Link } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
-import { supabase } from '../lib/supabase';
-import { Colors } from '../constants/Colors';
-import { AuthCard } from '../components/AuthCard';
-import { ThemedInput } from '../components/ThemedInput';
-import { ThemedButton } from '../components/ThemedButton';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import {
+  ArrowRight,
+  Lock,
+  Mail,
+  ScanFace,
+} from 'lucide-react-native';
+import { DS, Font } from '../lib/design-system';
+import { signIn } from '../lib/auth-api';
+import {
+  cacheFirstName,
+  hasStoredCredentials,
+  isBiometricAvailable,
+  isFaceIdEnabled,
+  readFirstName,
+  saveCredentials,
+} from '../lib/biometric-store';
+import AuthShell from '../components/auth/AuthShell';
+import AuthLogo from '../components/auth/AuthLogo';
+import AuthField from '../components/auth/AuthField';
+import PrimaryButton from '../components/auth/PrimaryButton';
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESET_URL = 'https://app.macrovault.com/forgot-password?source=ios';
 
 export default function SignInScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams<{ reason?: string }>();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [faceIdAvailable, setFaceIdAvailable] = useState(false);
+  const [headline, setHeadline] = useState('Welcome back.');
 
-  async function handleSignIn() {
+  // Personalize headline + show Face ID secondary button if available.
+  useEffect(() => {
+    void (async () => {
+      const name = await readFirstName();
+      if (name && name.length <= 10) setHeadline(`Welcome back, ${name}.`);
+      const [hw, hasCreds, enabled] = await Promise.all([
+        isBiometricAvailable(),
+        hasStoredCredentials(),
+        isFaceIdEnabled(),
+      ]);
+      setFaceIdAvailable(hw && hasCreds && enabled);
+    })();
+  }, []);
+
+  // If we got bumped here because the cached password is stale, surface that.
+  const banner =
+    params.reason === 'password_changed'
+      ? 'Your password has changed. Please sign in again.'
+      : null;
+
+  async function handleSubmit() {
     setError(null);
-    setLoading(true);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    setLoading(false);
-    if (signInError) {
-      if (signInError.message === 'Email not confirmed') {
-        setError('Please confirm your email before signing in.');
-      } else {
-        setError(signInError.message);
-      }
+    const e = email.trim();
+    if (!EMAIL_RE.test(e)) {
+      setError('Enter a valid email.');
+      return;
     }
+    if (password.length < 1) {
+      setError('Enter your password.');
+      return;
+    }
+    setLoading(true);
+    const result = await signIn(e, password);
+    setLoading(false);
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+    if (result.user?.firstName) {
+      await cacheFirstName(result.user.firstName);
+    }
+
+    // If the user already opted into Face ID, refresh the stored credentials
+    // here so the next launch unlocks with the current password. We never
+    // surprise-store creds — only when the toggle was on AND Face ID is
+    // already enabled.
+    if (keepSignedIn && (await isFaceIdEnabled())) {
+      await saveCredentials(e, password);
+    }
+
+    // AuthGate redirects to "/" when the session lands. If Face ID isn't
+    // enabled yet, route them through the opt-in screen first.
+    const alreadyEnabled = await isFaceIdEnabled();
+    router.replace(alreadyEnabled ? '/' : '/enable-face-id');
   }
 
-  function handleForgotPassword() {
-    Alert.alert('Coming soon', 'Password reset will be available in a future update.');
+  function handleForgot() {
+    void Linking.openURL(RESET_URL);
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <AuthShell>
       <KeyboardAvoidingView
-        style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.kav}
       >
         <ScrollView
-          contentContainerStyle={styles.scrollContent}
+          style={styles.scroll}
+          contentContainerStyle={styles.content}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.logoRow}>
-            <View style={styles.logoIcon}>
-              <Feather name="lock" size={20} color="#FFFFFF" />
-            </View>
-            <Text style={styles.logoText}>MacroVault</Text>
+          <View style={styles.logoSection}>
+            <AuthLogo />
           </View>
 
-          <AuthCard>
-            <Text style={styles.title}>Sign in</Text>
-            <Text style={styles.subtitle}>
-              Welcome back! Sign in to access your analysis, goals, and progress.
-            </Text>
+          <View style={styles.middle}>
+            <Text style={styles.headline}>{headline}</Text>
+            <Text style={styles.sub}>Pick up where you left off.</Text>
 
-            <View style={styles.fields}>
-              <ThemedInput
-                placeholder="Email"
+            {banner ? (
+              <View style={styles.banner}>
+                <Text style={styles.bannerText}>{banner}</Text>
+              </View>
+            ) : null}
+
+            <View style={styles.form}>
+              <AuthField
+                label="Email"
+                Icon={Mail}
                 value={email}
                 onChangeText={setEmail}
-                autoCapitalize="none"
-                autoCorrect={false}
-                autoComplete="email"
+                placeholder="you@example.com"
                 keyboardType="email-address"
+                autoComplete="email"
                 textContentType="emailAddress"
+                returnKeyType="next"
               />
-              <ThemedInput
-                placeholder="Password"
+              <AuthField
+                label="Password"
+                Icon={Lock}
                 value={password}
                 onChangeText={setPassword}
+                placeholder="••••••••"
                 secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
                 autoComplete="current-password"
                 textContentType="password"
+                returnKeyType="go"
+                onSubmitEditing={() => void handleSubmit()}
+                rightLabel={{ text: 'Forgot?', onPress: handleForgot }}
               />
-            </View>
 
-            <ThemedButton
-              title="Sign In"
-              loading={loading}
-              loadingTitle="Signing in..."
-              onPress={handleSignIn}
-              style={styles.submitButton}
-            />
+              {error ? <Text style={styles.fieldError}>{error}</Text> : null}
 
-            {error ? <Text style={styles.error}>{error}</Text> : null}
+              <View style={styles.toggleRow}>
+                <Switch
+                  value={keepSignedIn}
+                  onValueChange={setKeepSignedIn}
+                  trackColor={{ false: DS.border, true: DS.accent }}
+                  thumbColor="#fff"
+                  ios_backgroundColor={DS.border}
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: keepSignedIn }}
+                />
+                <Text
+                  style={[
+                    styles.toggleLabel,
+                    !keepSignedIn && { color: DS.textSecondary },
+                  ]}
+                >
+                  Keep me signed in for 30 days
+                </Text>
+              </View>
 
-            <Pressable onPress={handleForgotPassword} style={styles.forgotWrap}>
-              <Text style={styles.forgotText}>Forgot password?</Text>
-            </Pressable>
+              <View style={{ marginTop: 16 }}>
+                <PrimaryButton
+                  label={loading ? 'Signing in…' : 'Sign in'}
+                  onPress={() => void handleSubmit()}
+                  loading={loading}
+                  RightIcon={ArrowRight}
+                />
+              </View>
 
-            <View style={styles.switchRow}>
-              <Text style={styles.switchMuted}>No account? </Text>
-              <Link href="/sign-up" asChild>
-                <Pressable>
-                  <Text style={styles.switchAccent}>Register here</Text>
+              {faceIdAvailable ? (
+                <Pressable
+                  onPress={() => router.replace('/face-id')}
+                  style={({ pressed }) => [
+                    styles.secondaryBtn,
+                    pressed && { opacity: 0.85 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign in with Face ID"
+                >
+                  <ScanFace size={16} color={DS.accent} strokeWidth={2} />
+                  <Text style={styles.secondaryBtnText}>
+                    Sign in with Face ID
+                  </Text>
                 </Pressable>
-              </Link>
+              ) : null}
             </View>
-          </AuthCard>
+          </View>
+
+          <View style={styles.bottom}>
+            <View style={styles.registerRow}>
+              <Text style={styles.registerLeft}>New here?</Text>
+              <Pressable onPress={() => router.push('/sign-up')} hitSlop={6}>
+                <Text style={styles.registerLink}>Create an account</Text>
+              </Pressable>
+            </View>
+            <View style={styles.trustRow}>
+              <View style={styles.trustDot} />
+              <Text style={styles.trustText}>END-TO-END ENCRYPTED</Text>
+            </View>
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </AuthShell>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  flex: { flex: 1 },
-  scrollContent: {
+  kav: { flex: 1 },
+  scroll: { flex: 1 },
+  content: {
     flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 32,
   },
-  logoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    marginBottom: 18,
+  logoSection: { alignItems: 'center' },
+  middle: { flex: 1, justifyContent: 'center', paddingVertical: 24 },
+  headline: {
+    fontFamily: Font.bold,
+    fontSize: 30,
+    color: DS.text,
+    letterSpacing: -0.6,
   },
-  logoIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  logoText: {
-    color: Colors.textPrimary,
-    fontSize: 20,
-    fontWeight: '600',
-    letterSpacing: -0.3,
-  },
-  title: {
-    color: Colors.textPrimary,
-    fontSize: 24,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 6,
-    letterSpacing: -0.3,
-  },
-  subtitle: {
-    color: Colors.textSecondary,
+  sub: {
+    marginTop: 6,
+    fontFamily: Font.medium,
     fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 19,
-    marginBottom: 22,
-    paddingHorizontal: 4,
+    color: DS.textSecondary,
   },
-  fields: {
-    gap: 10,
-    marginBottom: 14,
-  },
-  submitButton: {
-    marginTop: 2,
-  },
-  error: {
-    marginTop: 12,
-    color: Colors.error,
-    backgroundColor: Colors.errorBg,
-    borderColor: Colors.errorBorder,
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingVertical: 9,
-    paddingHorizontal: 12,
-    fontSize: 13,
-    textAlign: 'center',
-  },
-  forgotWrap: {
-    alignSelf: 'center',
+  banner: {
     marginTop: 14,
-    paddingVertical: 4,
+    padding: 10,
+    borderRadius: 10,
+    backgroundColor: 'rgba(168, 124, 94, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(168, 124, 94, 0.3)',
   },
-  forgotText: {
-    color: Colors.textSecondary,
-    fontSize: 13,
+  bannerText: {
+    fontFamily: Font.medium,
+    fontSize: 12,
+    color: '#A87C5E',
   },
-  switchRow: {
+  form: {
+    marginTop: 24,
+    gap: 14,
+  },
+  fieldError: {
+    fontFamily: Font.medium,
+    fontSize: 12,
+    color: '#A87C5E',
+    marginTop: -4,
+  },
+  toggleRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginTop: 6,
+  },
+  toggleLabel: {
+    fontFamily: Font.semibold,
+    fontSize: 12,
+    color: DS.text,
+  },
+  secondaryBtn: {
+    marginTop: 10,
+    height: 44,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 12,
+    gap: 8,
+    backgroundColor: 'rgba(16, 185, 129, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.2)',
   },
-  switchMuted: {
-    color: Colors.textSecondary,
+  secondaryBtnText: {
+    fontFamily: Font.bold,
     fontSize: 13,
+    color: DS.accent,
   },
-  switchAccent: {
-    color: Colors.accentLight,
-    fontSize: 13,
-    fontWeight: '500',
+  bottom: {
+    alignItems: 'center',
+    gap: 12,
+    paddingTop: 16,
+  },
+  registerRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  registerLeft: {
+    fontFamily: Font.medium,
+    fontSize: 12,
+    color: DS.textTertiary,
+  },
+  registerLink: {
+    fontFamily: Font.bold,
+    fontSize: 12,
+    color: DS.accent,
+  },
+  trustRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  trustDot: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: DS.accent,
+  },
+  trustText: {
+    fontFamily: Font.bold,
+    fontSize: 10,
+    color: DS.textTertiary,
+    letterSpacing: 1.4,
   },
 });

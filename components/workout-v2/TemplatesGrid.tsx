@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { WorkoutTemplate } from '../../hooks/useWorkoutTemplates';
 import TemplateCard from './TemplateCard';
 
@@ -21,25 +22,31 @@ export default function TemplatesGrid({
   onTemplatePress,
   onNew,
 }: Props) {
+  const t = useTokens();
   const rows = chunk(templates, 2);
   return (
     <View>
       <View style={styles.headerRow}>
-        <Text style={styles.heading}>YOUR TEMPLATES</Text>
+        <Text style={[styles.heading, { color: t.textTertiary }]}>YOUR TEMPLATES</Text>
         <Pressable
           onPress={onNew}
           style={({ pressed }) => [styles.new, pressed && styles.pressed]}
           accessibilityRole="button"
           accessibilityLabel="New template"
         >
-          <Plus size={12} color={DS.accent} strokeWidth={2.5} />
-          <Text style={styles.newText}>New</Text>
+          <Plus size={12} color={t.primary} strokeWidth={2.5} />
+          <Text style={[styles.newText, { color: t.primary }]}>New</Text>
         </Pressable>
       </View>
 
       {templates.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>
+        <View
+          style={[
+            styles.empty,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          ]}
+        >
+          <Text style={[styles.emptyText, { color: t.textTertiary }]}>
             No templates yet. Save a workout to reuse it next time.
           </Text>
         </View>
@@ -47,11 +54,11 @@ export default function TemplatesGrid({
         <View style={styles.grid}>
           {rows.map((row, i) => (
             <View key={i} style={styles.row}>
-              {row.map((t) => (
+              {row.map((tpl) => (
                 <TemplateCard
-                  key={t.id}
-                  template={t}
-                  onPress={() => onTemplatePress(t)}
+                  key={tpl.id}
+                  template={tpl}
+                  onPress={() => onTemplatePress(tpl)}
                 />
               ))}
               {row.length === 1 ? <View style={styles.filler} /> : null}
@@ -74,7 +81,6 @@ const styles = StyleSheet.create({
   heading: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
     letterSpacing: 1,
   },
   new: {
@@ -88,7 +94,6 @@ const styles = StyleSheet.create({
   newText: {
     fontFamily: Font.bold,
     fontSize: 11,
-    color: DS.accent,
   },
   grid: {
     marginHorizontal: 20,
@@ -103,8 +108,6 @@ const styles = StyleSheet.create({
   },
   empty: {
     marginHorizontal: 20,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 16,
     paddingVertical: 24,
@@ -113,7 +116,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     lineHeight: 17,
   },

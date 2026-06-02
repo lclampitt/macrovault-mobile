@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 import LogMealSheet from '../meal-log/LogMealSheet';
-import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { useTodayMacros } from '../../hooks/useTodayMacros';
@@ -16,14 +15,12 @@ import {
 import type { MealPeriod } from '../../lib/meal-periods';
 import type { ScheduleItem } from '../../lib/schedule-store';
 import { fmtLocalDate } from '../../lib/date';
-import { DS, Motion } from '../../lib/design-system';
-import {
-  PERIOD_LABELS_UPPER,
-  periodFromDate,
-} from '../../lib/meal-periods';
+import { Motion } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
+import { useProfile } from '../../hooks/useProfile';
 import LiveBanner from './LiveBanner';
 import CaloriesHeroCard from './CaloriesHeroCard';
-import NextUpWorkoutCard from './NextUpWorkoutCard';
+import LogWorkoutCard from './LogWorkoutCard';
 import WeekStrip from './WeekStrip';
 import StatsGrid from './StatsGrid';
 import type { CaloriesBurnedData } from './CaloriesBurnedTile';
@@ -38,26 +35,6 @@ import QuickToolsStrip from './QuickToolsStrip';
 // count, current bodyweight. Other tiles need new hooks before they read
 // real data — clearly mocked here with realistic values per design spec.
 // --------------------------------------------------------------------------
-
-// MOCK: next scheduled workout. Future hook: useNextWorkout() reading
-// workout_templates + a rotation schedule. For now: a sensible push day.
-const MOCK_NEXT_WORKOUT = {
-  dayN: 4,
-  dayTotal: 5,
-  estimatedMinutes: 52,
-  title: 'Push · Chest / Triceps',
-  exerciseCount: 6,
-  workingSets: 22,
-  lastLogged: 'Sunday',
-  exercises: [
-    'Bench',
-    'Incline DB',
-    'Dips',
-    'Cable Fly',
-    'Tri Pushdown',
-    'Skullcrusher',
-  ],
-};
 
 // useThisWeekWorkouts now returns real per-day completion flags — see
 // `data.completedDays` (Mon=0 … Sun=6).
@@ -101,10 +78,19 @@ const DEFAULT_GOAL = { calories: 2400, protein: 180, carbs: 240, fat: 80 };
 
 export default function HomeDashboardV2() {
   const router = useRouter();
+  const t = useTokens();
   const now = useMemo(() => new Date(), []);
   const todayYmd = useMemo(() => fmtLocalDate(now), [now]);
   const { data: todayMacros, refetch: refetchTodayMacros } = useTodayMacros();
   const { data: goals } = useUserGoals();
+  const { profile } = useProfile();
+  // Take the first whitespace-delimited token from display_name. "Logan Smith"
+  // → "Logan"; "Logan" → "Logan"; null/empty → null (banner omits the name).
+  const firstName = useMemo(() => {
+    const dn = profile?.display_name?.trim();
+    if (!dn) return null;
+    return dn.split(/\s+/)[0] ?? null;
+  }, [profile?.display_name]);
   const { data: thisWeek } = useThisWeekWorkouts();
   const { data: weight } = useCurrentWeight();
   // User-defined schedule — meals, workouts, weigh-ins, anything else for
@@ -192,48 +178,35 @@ export default function HomeDashboardV2() {
       label: 'Protein',
       value: todayMacros.protein,
       target: targetProtein,
-      color: DS.accent,
+      color: t.macroProtein,
     },
     {
       key: 'C' as const,
       label: 'Carbs',
       value: todayMacros.carbs,
       target: targetCarbs,
-      color: DS.accentLight,
+      color: t.macroCarbs,
     },
     {
       key: 'F' as const,
       label: 'Fat',
       value: todayMacros.fat,
       target: targetFat,
-      color: DS.accentMid,
+      color: t.macroFat,
     },
   ];
 
   const sections = [
-    <LiveBanner
-      key="banner"
-      period={PERIOD_LABELS_UPPER[periodFromDate(now)]}
-      dayCount={89} // MOCK: days since signup
-    />,
+    <LiveBanner key="banner" firstName={firstName} />,
     <CaloriesHeroCard
       key="calories"
       consumed={todayMacros.calories}
       target={targetCalories}
       macros={macros}
     />,
-    <NextUpWorkoutCard
-      key="nextup"
-      dayN={MOCK_NEXT_WORKOUT.dayN}
-      dayTotal={MOCK_NEXT_WORKOUT.dayTotal}
-      estimatedMinutes={MOCK_NEXT_WORKOUT.estimatedMinutes}
-      title={MOCK_NEXT_WORKOUT.title}
-      exerciseCount={MOCK_NEXT_WORKOUT.exerciseCount}
-      workingSets={MOCK_NEXT_WORKOUT.workingSets}
-      lastLogged={MOCK_NEXT_WORKOUT.lastLogged}
-      exercises={MOCK_NEXT_WORKOUT.exercises}
+    <LogWorkoutCard
+      key="logworkout"
       onStart={() => router.push('/log-workout')}
-      onMore={() => comingSoon('Workout options')}
     />,
     <WeekStrip
       key="week"
@@ -259,12 +232,15 @@ export default function HomeDashboardV2() {
 
   return (
     <View style={styles.root}>
-      {/* Top emerald spine — subtle radial gradient at the top edge. */}
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.08)', 'transparent']}
-        style={styles.topSpine}
-        pointerEvents="none"
-      />
+      {/* No inline page background here — the app shell paints
+          `tokens.bgPage` on its root View and (in Sakura) layers the
+          atmospheric seigaiha pattern on top. A bg here would cover
+          the atmospherics. Falling petals are scoped to the
+          `LogWorkoutCard` only; this surface is intentionally bare. */}
+      {/* The ambient emerald glow now lives at the app shell level so it
+          bleeds through the chrome header — see _layout.tsx's
+          <TopGradientGlow />. Don't reintroduce a per-screen spine here:
+          it stacks under the chrome and re-creates the seam. */}
 
       <ScrollView
         contentContainerStyle={styles.scroll}
@@ -323,14 +299,6 @@ export default function HomeDashboardV2() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: DS.bg,
-  },
-  topSpine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
   },
   scroll: {
     paddingTop: 8,

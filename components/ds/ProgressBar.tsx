@@ -7,7 +7,8 @@ import Animated, {
   withDelay,
   withTiming,
 } from 'react-native-reanimated';
-import { DS, Motion } from '../../lib/design-system';
+import { Motion } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   /** 0–1 fill ratio (clamped). */
@@ -27,11 +28,13 @@ type Props = {
  */
 export default function ProgressBar({
   value,
-  color = DS.accent,
+  color,
   delay = 0,
   height = 3,
   style,
 }: Props) {
+  const t = useTokens();
+  const fillColor = color ?? t.primary;
   const clamped = Math.max(0, Math.min(1, value));
   const v = useSharedValue(0);
 
@@ -53,14 +56,14 @@ export default function ProgressBar({
     <View
       style={[
         styles.track,
-        { height, borderRadius: height / 2 },
+        { height, borderRadius: height / 2, backgroundColor: t.bgTrack },
         style,
       ]}
     >
       <Animated.View
         style={[
           styles.fill,
-          { backgroundColor: color, height, borderRadius: height / 2 },
+          { backgroundColor: fillColor, height, borderRadius: height / 2 },
           fillStyle,
         ]}
       />
@@ -71,7 +74,6 @@ export default function ProgressBar({
 const styles = StyleSheet.create({
   track: {
     width: '100%',
-    backgroundColor: DS.border,
     overflow: 'hidden',
   },
   fill: {

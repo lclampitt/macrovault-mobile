@@ -10,7 +10,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { Sparkles } from 'lucide-react-native';
-import { DS, Font, Radius, Shadow } from '../../lib/design-system';
+import { Font, Radius } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   onPress: () => void;
@@ -28,6 +29,7 @@ export default function AISuggestWeekBanner({
   loading = false,
   progress,
 }: Props) {
+  const t = useTokens();
   const x = useSharedValue(0);
 
   useEffect(() => {
@@ -55,8 +57,10 @@ export default function AISuggestWeekBanner({
         disabled={loading}
         style={({ pressed }) => [
           styles.btn,
-          Shadow.emeraldGlow,
+          { backgroundColor: t.primary },
+          t.shadowPrimaryGlow,
           styles.ring,
+          { borderColor: t.primaryBorderStrong },
           pressed && !loading && styles.pressed,
         ]}
         accessibilityRole="button"
@@ -64,7 +68,7 @@ export default function AISuggestWeekBanner({
         accessibilityState={{ disabled: loading }}
       >
         {/* Solid emerald base. */}
-        <View style={styles.solidBg} pointerEvents="none" />
+        <View style={[styles.solidBg, { backgroundColor: t.primary }]} pointerEvents="none" />
         {/* Shimmer overlay — translates a subtle lighter-emerald band across. */}
         <Animated.View
           style={[styles.shimmerWrap, shimmerStyle]}
@@ -83,8 +87,8 @@ export default function AISuggestWeekBanner({
         </Animated.View>
 
         <View style={styles.contentRow}>
-          <Sparkles size={14} color="#000" strokeWidth={2.5} />
-          <Text style={styles.label}>
+          <Sparkles size={14} color={t.textOnPrimary} strokeWidth={2.5} />
+          <Text style={[styles.label, { color: t.textOnPrimary }]}>
             {loading
               ? progress
                 ? `Generating… ${progress.done}/${progress.total}`
@@ -107,11 +111,9 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: Radius.cardCompact,
     overflow: 'hidden',
-    backgroundColor: DS.accent,
   },
   ring: {
     borderWidth: 1,
-    borderColor: DS.accentBorderStrong,
   },
   pressed: {
     opacity: 0.92,
@@ -119,7 +121,6 @@ const styles = StyleSheet.create({
   },
   solidBg: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: DS.accent,
   },
   shimmerWrap: {
     position: 'absolute',
@@ -142,6 +143,5 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: '#000',
   },
 });

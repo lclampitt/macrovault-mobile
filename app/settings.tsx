@@ -27,13 +27,19 @@ import {
   type LucideIcon,
 } from 'lucide-react-native';
 import { supabase } from '../lib/supabase';
-import { DS, Font, Radius } from '../lib/design-system';
+import { clearCredentials } from '../lib/biometric-store';
+import { Font, Radius } from '../lib/design-system';
+import { useTokens } from '../lib/theme-context';
+import type { Tokens } from '../lib/tokens';
 import { useAuth } from '../lib/auth-context';
 import { useProfile } from '../hooks/useProfile';
 import { useSubscription } from '../hooks/useSubscription';
 import AvatarDisplay from '../components/settings/AvatarDisplay';
+import EditDisplayNameSheet from '../components/settings/EditDisplayNameSheet';
 import DeleteConfirmModal from '../components/progress/DeleteConfirmModal';
 
+// Destructive coral stays stable across themes — same value in Emerald,
+// Light, and Sakura. Used for the Sign out + Delete account paths.
 const DESTRUCTIVE = '#E5736A';
 
 type Row = {
@@ -54,11 +60,13 @@ type Group = {
 
 export default function SettingsScreen() {
   const router = useRouter();
+  const t = useTokens();
   const { user } = useAuth();
-  const { profile, loading: profileLoading } = useProfile();
+  const { profile, loading: profileLoading, updateDisplayName } = useProfile();
   const { isPro, isProPlus, plan, loading: subLoading } = useSubscription();
   const [deleting, setDeleting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editNameOpen, setEditNameOpen] = useState(false);
 
   const headerName = useMemo(() => {
     const n = profile?.display_name?.trim();
@@ -76,6 +84,10 @@ export default function SettingsScreen() {
   }
 
   async function handleSignOut() {
+    // Purge biometric credentials + cached first name FIRST. If we let
+    // supabase.auth.signOut run first, the AuthGate redirect can race and
+    // route the user through /face-id before we've cleared the Keychain.
+    await clearCredentials();
     await supabase.auth.signOut();
     // AuthGate redirects to /sign-in when session clears.
   }
@@ -117,8 +129,7 @@ export default function SettingsScreen() {
           Icon: User,
           label: 'Display name',
           value: profileLoading ? '…' : (profile?.display_name?.trim() || 'Set name'),
-          onPress: () =>
-            Alert.alert('Edit name', 'Inline editor coming next pass.'),
+          onPress: () => setEditNameOpen(true),
         },
         {
           Icon: Mail,
@@ -212,6 +223,10 @@ export default function SettingsScreen() {
   ];
 
   return (
+    // No background on the SafeAreaView — the app shell's root View paints
+    // tokens.bgPage and (in Sakura) the atmospheric layer sits on top of
+    // it. A bg here would cover that layer and prevent petals from
+    // showing through the gaps between cards.
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
       <View style={styles.header}>
         <Pressable
@@ -221,9 +236,11 @@ export default function SettingsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+          <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Settings</Text>
+        <Text style={[styles.headerTitle, { color: t.textPrimary }]}>
+          Settings
+        </Text>
         <View style={styles.iconBtn} />
       </View>
 
@@ -232,7 +249,12 @@ export default function SettingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {/* Identity card */}
-        <View style={styles.identityCard}>
+        <View
+          style={[
+            styles.identityCard,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+          ]}
+        >
           <AvatarDisplay
             email={user?.email}
             displayName={profile?.display_name ?? ''}
@@ -240,26 +262,50 @@ export default function SettingsScreen() {
             variant="outlined"
           />
           <View style={styles.identityInfo}>
-            <Text style={styles.identityName} numberOfLines={1}>
+            <Text
+              style={[styles.identityName, { color: t.textPrimary }]}
+              numberOfLines={1}
+            >
               {headerName}
             </Text>
-            <Text style={styles.identityEmail} numberOfLines={1}>
+            <Text
+              style={[styles.identityEmail, { color: t.textSecondary }]}
+              numberOfLines={1}
+            >
               {user?.email ?? ''}
             </Text>
-            <View style={styles.planChip}>
-              <Text style={styles.planChipText}>{planLabel}</Text>
+            <View
+              style={[
+                styles.planChip,
+                {
+                  backgroundColor: t.primaryTintBg,
+                  borderColor: t.primaryTintBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.planChipText, { color: t.primary }]}>
+                {planLabel}
+              </Text>
             </View>
           </View>
         </View>
 
         {groups.map((g) => (
           <View key={g.label} style={styles.groupWrap}>
-            <Text style={styles.groupLabel}>{g.label}</Text>
-            <View style={styles.groupCard}>
+            <Text style={[styles.groupLabel, { color: t.textTertiary }]}>
+              {g.label}
+            </Text>
+            <View
+              style={[
+                styles.groupCard,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              ]}
+            >
               {g.rows.map((row, i) => (
                 <SettingsRow
                   key={row.label}
                   row={row}
+                  tokens={t}
                   withDivider={i < g.rows.length - 1}
                 />
               ))}
@@ -276,6 +322,7 @@ export default function SettingsScreen() {
           }
           style={({ pressed }) => [
             styles.signOutBtn,
+            { backgroundColor: t.bgCard },
             pressed && styles.signOutBtnPressed,
           ]}
           accessibilityRole="button"
@@ -285,8 +332,17 @@ export default function SettingsScreen() {
           <Text style={styles.signOutText}>Sign out</Text>
         </Pressable>
 
-        <Text style={styles.footer}>© 2026 MacroVault</Text>
+        <Text style={[styles.footer, { color: t.textQuaternary }]}>
+          © 2026 MacroVault
+        </Text>
       </ScrollView>
+
+      <EditDisplayNameSheet
+        visible={editNameOpen}
+        initialValue={profile?.display_name ?? ''}
+        onClose={() => setEditNameOpen(false)}
+        onSave={updateDisplayName}
+      />
 
       <DeleteConfirmModal
         visible={confirmDelete}
@@ -301,17 +357,34 @@ export default function SettingsScreen() {
   );
 }
 
-function SettingsRow({ row, withDivider }: { row: Row; withDivider: boolean }) {
+/**
+ * Settings row — receives `tokens` as a prop from the parent for the same
+ * reason every other sub-component in the app does it: parent already
+ * resolved the active tokens, threading them down keeps the sub-component
+ * from running its own context lookup that could go stale on theme flip.
+ */
+function SettingsRow({
+  row,
+  tokens: t,
+  withDivider,
+}: {
+  row: Row;
+  tokens: Tokens;
+  withDivider: boolean;
+}) {
   const tappable = !!row.onPress;
-  const color = row.destructive ? DESTRUCTIVE : DS.text;
+  const labelColor = row.destructive ? DESTRUCTIVE : t.textPrimary;
   return (
     <Pressable
       onPress={row.onPress}
       disabled={!tappable}
       style={({ pressed }) => [
         styles.row,
-        withDivider && styles.rowDivider,
-        tappable && pressed && styles.rowPressed,
+        withDivider && {
+          borderBottomWidth: 1,
+          borderBottomColor: t.borderSubtle,
+        },
+        tappable && pressed && { backgroundColor: t.bgCardElevated },
       ]}
       accessibilityRole={tappable ? 'button' : undefined}
       accessibilityLabel={row.label}
@@ -319,27 +392,47 @@ function SettingsRow({ row, withDivider }: { row: Row; withDivider: boolean }) {
       <View
         style={[
           styles.rowIcon,
-          row.destructive && styles.rowIconDestructive,
+          row.destructive
+            ? styles.rowIconDestructive
+            : {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryTintBorder,
+              },
         ]}
       >
         <row.Icon
           size={14}
-          color={row.destructive ? DESTRUCTIVE : DS.accent}
+          color={row.destructive ? DESTRUCTIVE : t.primary}
           strokeWidth={2}
         />
       </View>
-      <Text style={[styles.rowLabel, { color }]}>{row.label}</Text>
+      <Text style={[styles.rowLabel, { color: labelColor }]}>
+        {row.label}
+      </Text>
       {row.value ? (
-        <Text style={styles.rowValue} numberOfLines={1}>
+        <Text
+          style={[styles.rowValue, { color: t.textSecondary }]}
+          numberOfLines={1}
+        >
           {row.value}
         </Text>
       ) : null}
       {row.comingSoon ? (
-        <View style={styles.soonPill}>
-          <Text style={styles.soonPillText}>Soon</Text>
+        <View
+          style={[
+            styles.soonPill,
+            {
+              backgroundColor: t.bgCardElevated,
+              borderColor: t.borderDefault,
+            },
+          ]}
+        >
+          <Text style={[styles.soonPillText, { color: t.textTertiary }]}>
+            Soon
+          </Text>
         </View>
       ) : tappable ? (
-        <ChevronRight size={14} color={DS.textTertiary} strokeWidth={2} />
+        <ChevronRight size={14} color={t.textTertiary} strokeWidth={2} />
       ) : null}
     </Pressable>
   );
@@ -350,7 +443,7 @@ function SettingsRow({ row, withDivider }: { row: Row; withDivider: boolean }) {
 void ActivityIndicator;
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: DS.bg },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -368,7 +461,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   scrollContent: {
@@ -382,8 +474,6 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 16,
     marginBottom: 18,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
   },
@@ -391,13 +481,11 @@ const styles = StyleSheet.create({
   identityName: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   identityEmail: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
   },
   planChip: {
     alignSelf: 'flex-start',
@@ -405,14 +493,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
   },
   planChipText: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
     letterSpacing: 0.4,
   },
   groupWrap: {
@@ -421,14 +506,11 @@ const styles = StyleSheet.create({
   groupLabel: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.textTertiary,
     letterSpacing: 0.8,
     paddingHorizontal: 6,
     marginBottom: 6,
   },
   groupCard: {
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
     overflow: 'hidden',
@@ -440,20 +522,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  rowPressed: {
-    backgroundColor: DS.surfaceFlat,
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
-  },
   rowIcon: {
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -469,21 +542,17 @@ const styles = StyleSheet.create({
   rowValue: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     maxWidth: 160,
   },
   soonPill: {
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 999,
-    backgroundColor: DS.surfaceFlat,
     borderWidth: 1,
-    borderColor: DS.border,
   },
   soonPillText: {
     fontFamily: Font.bold,
     fontSize: 9,
-    color: DS.textTertiary,
     letterSpacing: 0.4,
   },
   signOutBtn: {
@@ -494,7 +563,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 14,
     borderRadius: Radius.card,
-    backgroundColor: DS.surface,
     borderWidth: 1,
     borderColor: 'rgba(229, 115, 106, 0.25)',
   },
@@ -508,7 +576,6 @@ const styles = StyleSheet.create({
   footer: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textQuaternary,
     textAlign: 'center',
     marginTop: 18,
   },

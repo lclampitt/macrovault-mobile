@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Check } from 'lucide-react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import Card from '../ds/Card';
 import SectionLabel from '../ds/SectionLabel';
 
@@ -14,6 +15,7 @@ type Props = {
 const LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 export default function WeekStrip({ completed, todayIndex }: Props) {
+  const t = useTokens();
   const completedCount = completed.filter(Boolean).length;
   const target = 5; // user's workouts-per-week goal (placeholder until wired to settings)
 
@@ -23,9 +25,19 @@ export default function WeekStrip({ completed, todayIndex }: Props) {
         <View style={styles.headerRow}>
           <SectionLabel>This week</SectionLabel>
           <View style={styles.countRow}>
-            <Text style={[styles.countValue, Tabular]}>{completedCount}</Text>
-            <Text style={styles.countSlash}>/</Text>
-            <Text style={[styles.countTarget, Tabular]}>{target}</Text>
+            <Text
+              style={[styles.countValue, Tabular, { color: t.textPrimary }]}
+            >
+              {completedCount}
+            </Text>
+            <Text style={[styles.countSlash, { color: t.textQuaternary }]}>
+              /
+            </Text>
+            <Text
+              style={[styles.countTarget, Tabular, { color: t.textTertiary }]}
+            >
+              {target}
+            </Text>
           </View>
         </View>
 
@@ -33,12 +45,22 @@ export default function WeekStrip({ completed, todayIndex }: Props) {
           {LETTERS.map((letter, i) => {
             const isToday = i === todayIndex;
             const done = completed[i];
+            const cellBg = done
+              ? t.primary
+              : isToday
+                ? t.primaryTintBg
+                : t.bgTrack;
+            const cellBorder = isToday
+              ? t.primaryBorderStrong
+              : done
+                ? t.primary
+                : t.borderDefault;
             return (
               <View key={i} style={styles.dayCol}>
                 <Text
                   style={[
                     styles.letter,
-                    { color: isToday ? DS.accent : DS.textQuaternary },
+                    { color: isToday ? t.primary : t.textTertiary },
                   ]}
                 >
                   {letter}
@@ -46,17 +68,24 @@ export default function WeekStrip({ completed, todayIndex }: Props) {
                 <View
                   style={[
                     styles.cell,
-                    done
-                      ? styles.cellDone
-                      : isToday
-                        ? styles.cellToday
-                        : styles.cellEmpty,
+                    {
+                      backgroundColor: cellBg,
+                      borderColor: cellBorder,
+                      borderWidth: 1,
+                      borderStyle: isToday ? 'dashed' : 'solid',
+                    },
                   ]}
                 >
                   {done ? (
-                    <Check size={12} color="#000" strokeWidth={3} />
+                    <Check
+                      size={12}
+                      color={t.textOnPrimary}
+                      strokeWidth={3}
+                    />
                   ) : isToday ? (
-                    <View style={styles.todayDot} />
+                    <View
+                      style={[styles.todayDot, { backgroundColor: t.primary }]}
+                    />
                   ) : null}
                 </View>
               </View>
@@ -86,16 +115,13 @@ const styles = StyleSheet.create({
   countValue: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   countSlash: {
     fontSize: 11,
-    color: DS.textQuaternary,
   },
   countTarget: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textSecondary,
   },
   daysRow: {
     flexDirection: 'row',
@@ -107,7 +133,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   letter: {
-    fontFamily: Font.medium,
+    fontFamily: Font.bold,
     fontSize: 10,
   },
   cell: {
@@ -117,22 +143,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  cellDone: {
-    backgroundColor: DS.accent,
-  },
-  cellToday: {
-    backgroundColor: DS.accentSoft,
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: 'rgba(16, 185, 129, 0.5)',
-  },
-  cellEmpty: {
-    backgroundColor: DS.surfaceFlat,
-  },
   todayDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: DS.accent,
   },
 });

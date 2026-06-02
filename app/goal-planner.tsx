@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -9,31 +9,18 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import {
-  ChevronLeft,
-  Edit3,
-  Flame,
-  Target,
-  TrendingDown,
-  TrendingUp,
-  type LucideIcon,
-} from 'lucide-react-native';
-import { DS, Font, Motion, Radius, Tabular } from '../lib/design-system';
-import { useActiveGoal, type PhaseType } from '../hooks/useActiveGoal';
-import GoalTimelineCard from '../components/goal-planner/GoalTimelineCard';
-import MacroTargetsCard from '../components/goal-planner/MacroTargetsCard';
-import LogNutritionCard from '../components/goal-planner/LogNutritionCard';
-import GoalEditorModal from '../components/goal-planner/GoalEditorModal';
-
-const PHASE_META: Record<PhaseType, { label: string; tagline: string; Icon: LucideIcon }> = {
-  cutting: { label: 'Cut', tagline: 'Calorie deficit', Icon: TrendingDown },
-  maintenance: { label: 'Maintain', tagline: 'Hold the line', Icon: Target },
-  bulking: { label: 'Bulk', tagline: 'Calorie surplus', Icon: TrendingUp },
-};
+import { ChevronLeft, ChevronRight, Pencil, Target } from 'lucide-react-native';
+import { Font, Motion, Radius, Tabular } from '../lib/design-system';
+import { useTokens } from '../lib/theme-context';
+import { useActiveGoal } from '../hooks/useActiveGoal';
+import PrimaryGoalCard from '../components/goal-planner/PrimaryGoalCard';
+import GoalTimelineCardV2 from '../components/goal-planner/GoalTimelineCardV2';
+import MacroTargetCard from '../components/goal-planner/MacroTargetCard';
+import EditGoalSheet from '../components/goal-planner/EditGoalSheet';
 
 export default function GoalPlannerScreen() {
+  const t = useTokens();
   const router = useRouter();
   const { goal, loading, error, refetch } = useActiveGoal();
   const [editorOpen, setEditorOpen] = useState(false);
@@ -43,42 +30,35 @@ export default function GoalPlannerScreen() {
     else router.replace('/');
   }
 
-  const phase = goal?.phaseType ?? 'maintenance';
-  const meta = PHASE_META[phase];
-  const PhaseIcon = meta.Icon;
-
-  const progressLabel = useMemo(() => {
-    if (!goal || !goal.hasTimeframe) return null;
-    return `Week ${goal.weekNumber} of ${goal.timeframeWeeks}`;
-  }, [goal]);
-
   return (
-    <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.10)', 'transparent']}
-        style={styles.topSpine}
-        pointerEvents="none"
-      />
-
+    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom']}>
+      {/* Page header — back / title / edit */}
       <View style={styles.header}>
         <Pressable
           onPress={handleBack}
           hitSlop={10}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { borderColor: t.borderDefault, backgroundColor: t.bgCard }]}
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
-          <ChevronLeft size={18} color={DS.text} strokeWidth={2} />
+          <ChevronLeft size={18} color={t.textPrimary} strokeWidth={2} />
         </Pressable>
-        <Text style={styles.headerTitle}>Goal Planner</Text>
+        <View style={styles.headerTitleWrap}>
+          <Text style={[styles.headerTitle, { color: t.textPrimary }]}>Goal Planner</Text>
+        </View>
         <Pressable
           onPress={() => setEditorOpen(true)}
           hitSlop={10}
-          style={styles.iconBtn}
+          style={[styles.iconBtn, { borderColor: t.borderDefault, backgroundColor: t.bgCard }]}
           accessibilityRole="button"
           accessibilityLabel="Edit goal"
+          disabled={!goal}
         >
-          <Edit3 size={16} color={DS.accent} strokeWidth={2} />
+          <Pencil
+            size={15}
+            color={goal ? t.primary : t.textQuaternary}
+            strokeWidth={2}
+          />
         </Pressable>
       </View>
 
@@ -88,10 +68,10 @@ export default function GoalPlannerScreen() {
       >
         {loading ? (
           <View style={styles.loadingWrap}>
-            <ActivityIndicator color={DS.accent} />
+            <ActivityIndicator color={t.primary} />
           </View>
         ) : error ? (
-          <View style={styles.errorCard}>
+          <View style={[styles.errorCard, { backgroundColor: t.bgCard }]}>
             <Text style={styles.errorText}>
               Couldn't load your goal. {error}
             </Text>
@@ -100,87 +80,89 @@ export default function GoalPlannerScreen() {
           <EmptyGoal onSetUp={() => setEditorOpen(true)} />
         ) : (
           <>
+            {/* Status banner */}
+            <View style={[styles.statusBanner, { backgroundColor: t.primaryTintBg, borderColor: t.primaryTintBorder }]}>
+              <View style={[styles.statusDot, { backgroundColor: t.primary }]} />
+              <Text style={[styles.statusText, { color: t.primary }]}>
+                ACTIVE GOAL
+                {goal.hasTimeframe ? (
+                  <>
+                    {' · '}
+                    <Text style={[styles.statusStrong, { color: t.primary }, Tabular]}>
+                      Day {goal.currentDay} of {goal.totalDays}
+                    </Text>
+                  </>
+                ) : null}
+              </Text>
+            </View>
+
             <Animated.View
               entering={FadeInDown.duration(Motion.durationRise)}
-              style={styles.heroOuter}
+              style={styles.section}
             >
-              <View style={styles.heroCard}>
-                <View style={styles.heroHeader}>
-                  <View style={styles.heroIcon}>
-                    <PhaseIcon size={16} color={DS.accent} strokeWidth={2.5} />
-                  </View>
-                  <View>
-                    <Text style={styles.heroLabel}>PRIMARY GOAL</Text>
-                    <Text style={styles.heroTitle}>{meta.label}</Text>
-                  </View>
-                </View>
-                <Text style={styles.heroTagline}>{meta.tagline}</Text>
-
-                <View style={styles.heroMacroRow}>
-                  <HeroStat
-                    label="DAILY KCAL"
-                    value={goal.calories.toLocaleString()}
-                  />
-                  <View style={styles.heroDivider} />
-                  <HeroStat
-                    label="PROTEIN"
-                    value={`${goal.protein}g`}
-                  />
-                  <View style={styles.heroDivider} />
-                  <HeroStat
-                    label="CARBS"
-                    value={`${goal.carbs}g`}
-                  />
-                  <View style={styles.heroDivider} />
-                  <HeroStat label="FAT" value={`${goal.fat}g`} />
-                </View>
-
-                {progressLabel ? (
-                  <View style={styles.heroFooterRow}>
-                    <Flame size={11} color={DS.accent} strokeWidth={2} />
-                    <Text style={styles.heroFooterText}>
-                      {progressLabel} · {goal.daysLeft} days left
-                    </Text>
-                  </View>
-                ) : (
-                  <Text style={styles.heroFooterLight}>
-                    No timeframe yet — tap edit to set one.
-                  </Text>
-                )}
-
-                {/* NOTE: Phase coloring (red for cut, blue for bulk) is on the
-                    roadmap — for now we stay emerald-on-black to keep the rest
-                    of the deltas in the app consistent. The phase type is
-                    exposed via `useActiveGoal().phaseType` for any caller
-                    that wants to color a delta. */}
-              </View>
+              <PrimaryGoalCard goal={goal} />
             </Animated.View>
 
-            <Animated.View
-              entering={FadeInDown.duration(Motion.durationRise).delay(40)}
-            >
-              {goal.hasTimeframe ? <GoalTimelineCard goal={goal} /> : null}
-            </Animated.View>
+            {goal.hasTimeframe ? (
+              <Animated.View
+                entering={FadeInDown.duration(Motion.durationRise).delay(40)}
+                style={styles.section}
+              >
+                <GoalTimelineCardV2 goal={goal} />
+              </Animated.View>
+            ) : null}
 
             <Animated.View
               entering={FadeInDown.duration(Motion.durationRise).delay(80)}
+              style={styles.section}
             >
-              <MacroTargetsCard goal={goal} />
+              <MacroTargetCard goal={goal} />
+            </Animated.View>
+
+            {/* Adjust goal CTA */}
+            <Animated.View
+              entering={FadeInDown.duration(Motion.durationRise).delay(120)}
+              style={styles.section}
+            >
+              <Pressable
+                onPress={() => setEditorOpen(true)}
+                style={({ pressed }) => [
+                  styles.adjustBtn,
+                  { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+                  pressed && styles.pressed,
+                ]}
+                accessibilityRole="button"
+                accessibilityLabel="Adjust goal"
+              >
+                <View style={styles.adjustLeft}>
+                  <View style={[styles.adjustIcon, { backgroundColor: t.primaryTintBg, borderColor: t.primaryTintBorder }]}>
+                    <Pencil size={14} color={t.primary} strokeWidth={2.25} />
+                  </View>
+                  <View>
+                    <Text style={[styles.adjustTitle, { color: t.textPrimary }]}>Adjust goal</Text>
+                    <Text style={[styles.adjustSub, { color: t.textTertiary }]}>
+                      Tune calories, macros, or timeline
+                    </Text>
+                  </View>
+                </View>
+                <ChevronRight
+                  size={16}
+                  color={t.textTertiary}
+                  strokeWidth={2}
+                />
+              </Pressable>
+              <Text style={[styles.helperMicrotype, { color: t.textTertiary }]}>
+                Changing your goal type archives the current plan and starts a
+                fresh timeline.
+              </Text>
             </Animated.View>
           </>
         )}
 
-        <Animated.View
-          entering={FadeInDown.duration(Motion.durationRise).delay(120)}
-          style={styles.loggerWrap}
-        >
-          <LogNutritionCard />
-        </Animated.View>
-
         <View style={styles.bottomSpacer} />
       </ScrollView>
 
-      <GoalEditorModal
+      <EditGoalSheet
         visible={editorOpen}
         initial={goal}
         onClose={() => setEditorOpen(false)}
@@ -192,71 +174,59 @@ export default function GoalPlannerScreen() {
   );
 }
 
-function HeroStat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.heroStat}>
-      <Text style={[styles.heroStatValue, Tabular]}>{value}</Text>
-      <Text style={styles.heroStatLabel}>{label}</Text>
-    </View>
-  );
-}
-
 function EmptyGoal({ onSetUp }: { onSetUp: () => void }) {
+  const t = useTokens();
   return (
-    <View style={styles.emptyCard}>
-      <Target size={36} color={DS.accent} strokeWidth={2} />
-      <Text style={styles.emptyTitle}>No goal set yet</Text>
-      <Text style={styles.emptySub}>
-        Pick a phase, set a calorie target, and we'll track week-over-week
+    <View style={[styles.emptyCard, { backgroundColor: t.bgCard, borderColor: t.borderDefault }]}>
+      <View style={[styles.emptyIcon, { backgroundColor: t.primaryTintBg, borderColor: t.primaryTintBorder }]}>
+        <Target size={32} color={t.primary} strokeWidth={2} />
+      </View>
+      <Text style={[styles.emptyTitle, { color: t.textPrimary }]}>No goal set yet</Text>
+      <Text style={[styles.emptySub, { color: t.textTertiary }]}>
+        Pick a phase, set a calorie target, and we'll track day-over-day
         progress for you.
       </Text>
       <Pressable
         onPress={onSetUp}
-        style={({ pressed }) => [
-          styles.emptyBtn,
-          pressed && styles.pressed,
-        ]}
+        style={({ pressed }) => [styles.emptyBtn, { backgroundColor: t.primary }, pressed && styles.pressed]}
         accessibilityRole="button"
         accessibilityLabel="Set up a goal"
       >
-        <Text style={styles.emptyBtnText}>Set up a goal</Text>
+        <Text style={[styles.emptyBtnText, { color: t.textOnPrimary }]}>Set up a goal</Text>
       </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: DS.bg },
-  topSpine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 140,
-  },
+  safeArea: { flex: 1 },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 12,
-    paddingVertical: 10,
+    paddingVertical: 8,
+    gap: 8,
   },
   iconBtn: {
     width: 36,
     height: 36,
     borderRadius: 10,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  headerTitleWrap: {
+    flex: 1,
+    alignItems: 'center',
   },
   headerTitle: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
     letterSpacing: -0.2,
   },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 6,
     paddingBottom: 24,
   },
   loadingWrap: {
@@ -265,7 +235,6 @@ const styles = StyleSheet.create({
   },
   errorCard: {
     padding: 16,
-    backgroundColor: DS.surface,
     borderColor: 'rgba(229, 115, 106, 0.25)',
     borderWidth: 1,
     borderRadius: Radius.card,
@@ -276,108 +245,94 @@ const styles = StyleSheet.create({
     color: '#E5736A',
     lineHeight: 18,
   },
-  heroOuter: {
+  statusBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderRadius: 10,
     marginBottom: 14,
   },
-  heroCard: {
-    backgroundColor: DS.surface,
-    borderColor: DS.accentBorder,
-    borderWidth: 1,
-    borderRadius: Radius.card,
-    padding: 16,
-    gap: 12,
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
   },
-  heroHeader: {
+  statusText: {
+    fontFamily: Font.bold,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    flex: 1,
+  },
+  statusStrong: {
+    fontFamily: Font.bold,
+  },
+  section: {
+    marginBottom: 14,
+  },
+  adjustBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderRadius: Radius.cardCompact,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  adjustLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
   },
-  heroIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: 10,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
+  adjustIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 9,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  heroLabel: {
+  adjustTitle: {
     fontFamily: Font.bold,
-    fontSize: 9,
-    color: DS.textTertiary,
-    letterSpacing: 0.8,
+    fontSize: 14,
   },
-  heroTitle: {
-    fontFamily: Font.extrabold,
-    fontSize: 22,
-    color: DS.text,
-    letterSpacing: -0.4,
+  adjustSub: {
+    fontFamily: Font.medium,
+    fontSize: 11,
     marginTop: 2,
   },
-  heroTagline: {
+  helperMicrotype: {
     fontFamily: Font.medium,
-    fontSize: 12,
-    color: DS.textTertiary,
-  },
-  heroMacroRow: {
-    flexDirection: 'row',
-    backgroundColor: DS.bg,
-    borderColor: DS.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingVertical: 12,
-  },
-  heroStat: { flex: 1, alignItems: 'center', gap: 3 },
-  heroDivider: {
-    width: 1,
-    backgroundColor: DS.border,
-  },
-  heroStatValue: {
-    fontFamily: Font.bold,
-    fontSize: 15,
-    color: DS.text,
-  },
-  heroStatLabel: {
-    fontFamily: Font.bold,
-    fontSize: 9,
-    color: DS.textTertiary,
-    letterSpacing: 0.6,
-  },
-  heroFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  heroFooterText: {
-    fontFamily: Font.bold,
-    fontSize: 11,
-    color: DS.accent,
-    letterSpacing: 0.2,
-  },
-  heroFooterLight: {
-    fontFamily: Font.medium,
-    fontSize: 11,
-    color: DS.textTertiary,
+    fontSize: 10,
+    marginTop: 8,
+    paddingHorizontal: 4,
+    lineHeight: 14,
   },
   emptyCard: {
     padding: 30,
     alignItems: 'center',
     gap: 10,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
+  },
+  emptyIcon: {
+    width: 56,
+    height: 56,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
   },
   emptyTitle: {
     fontFamily: Font.bold,
     fontSize: 16,
-    color: DS.text,
   },
   emptySub: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
     textAlign: 'center',
     lineHeight: 17,
   },
@@ -386,15 +341,10 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 22,
     borderRadius: 12,
-    backgroundColor: DS.accent,
   },
   emptyBtnText: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: '#000',
-  },
-  loggerWrap: {
-    marginTop: 14,
   },
   bottomSpacer: { height: 140 },
   pressed: { opacity: 0.85, transform: [{ scale: 0.98 }] },

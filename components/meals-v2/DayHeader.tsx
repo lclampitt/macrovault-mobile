@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Copy, RefreshCw } from 'lucide-react-native';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import PulseDot from '../ds/PulseDot';
 
 type Props = {
@@ -25,6 +26,7 @@ export default function DayHeader({
   onRefresh,
   onCopy,
 }: Props) {
+  const t = useTokens();
   const mealLabel = mealCount === 1 ? '1 meal' : `${mealCount} meals`;
   const snackLabel =
     snackCount === 0
@@ -36,12 +38,16 @@ export default function DayHeader({
   return (
     <View style={styles.row}>
       <View style={styles.left}>
-        <Text style={styles.fullDate}>{fullDate}</Text>
+        <Text style={[styles.fullDate, { color: t.textPrimary }]}>{fullDate}</Text>
         <View style={styles.metaRow}>
-          {isToday ? <PulseDot size={6} /> : <View style={styles.staticDot} />}
-          <Text style={styles.metaLabel}>{relativeLabel}</Text>
-          <Text style={styles.metaDot}>·</Text>
-          <Text style={styles.metaText}>
+          {isToday ? (
+            <PulseDot size={6} />
+          ) : (
+            <View style={[styles.staticDot, { backgroundColor: t.primary }]} />
+          )}
+          <Text style={[styles.metaLabel, { color: t.primary }]}>{relativeLabel}</Text>
+          <Text style={[styles.metaDot, { color: t.textQuaternary }]}>·</Text>
+          <Text style={[styles.metaText, { color: t.textSecondary }]}>
             {mealLabel} · {snackLabel}
           </Text>
         </View>
@@ -53,6 +59,7 @@ export default function DayHeader({
           disabled={refreshing}
           style={({ pressed }) => [
             styles.iconBtn,
+            { borderColor: t.borderDefault, backgroundColor: t.bgCard },
             (pressed || refreshing) && styles.pressed,
           ]}
           accessibilityRole="button"
@@ -60,17 +67,21 @@ export default function DayHeader({
         >
           <RefreshCw
             size={14}
-            color={refreshing ? DS.accent : DS.textSecondary}
+            color={refreshing ? t.primary : t.textSecondary}
             strokeWidth={2}
           />
         </Pressable>
         <Pressable
           onPress={onCopy}
-          style={({ pressed }) => [styles.iconBtn, pressed && styles.pressed]}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            { borderColor: t.borderDefault, backgroundColor: t.bgCard },
+            pressed && styles.pressed,
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Copy today's meals to another day"
         >
-          <Copy size={14} color={DS.textSecondary} strokeWidth={2} />
+          <Copy size={14} color={t.textSecondary} strokeWidth={2} />
         </Pressable>
       </View>
     </View>
@@ -91,7 +102,6 @@ const styles = StyleSheet.create({
   fullDate: {
     fontFamily: Font.bold,
     fontSize: 18,
-    color: DS.text,
     letterSpacing: -0.3,
   },
   metaRow: {
@@ -104,22 +114,18 @@ const styles = StyleSheet.create({
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: DS.accent,
     opacity: 0.5,
   },
   metaLabel: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.accent,
   },
   metaDot: {
-    color: DS.textDimmest,
     fontSize: 11,
   },
   metaText: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   actions: {
     flexDirection: 'row',
@@ -130,8 +136,6 @@ const styles = StyleSheet.create({
     height: 32,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: DS.border,
-    backgroundColor: DS.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },

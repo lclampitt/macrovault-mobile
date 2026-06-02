@@ -14,23 +14,19 @@ import {
   type BottomSheetBackdropProps,
 } from '@gorhom/bottom-sheet';
 import {
-  Activity,
   BookOpen,
-  Calculator,
-  CalendarHeart,
   ChevronRight,
-  Dumbbell,
   Heart,
   Lock,
-  Ruler,
   Settings as SettingsIcon,
   Target,
-  TrendingUp,
   Utensils,
   X,
   type LucideIcon,
 } from 'lucide-react-native';
-import { DS, Font, Radius } from '../lib/design-system';
+import { Font, Radius } from '../lib/design-system';
+import { useTokens } from '../lib/theme-context';
+import type { Tokens } from '../lib/tokens';
 import { useSubscription } from '../hooks/useSubscription';
 
 type MoreItem = {
@@ -48,44 +44,26 @@ type MoreSection = {
   items: MoreItem[];
 };
 
-// NOTE: Order + groupings match the brief. ANALYZE = backward-looking; PLAN =
-//   forward-looking; LIBRARY = static reference. Settings sits separately so
-//   it's always one tap from the bottom regardless of plan changes.
+// NOTE: This menu used to have 9 tiles across three sections; the IA
+// simplification pass moved most of it elsewhere:
+//   • Progress / Activity / Measurements → Stats tab (Overview / Activity /
+//     Measurements sub-tabs)
+//   • Workouts                            → the floating + (Start workout)
+//   • Calculators                         → removed entirely (the underlying
+//     math still powers Goal Planner)
+// What remains is the small set of power features that don't fit any tab:
+// Fitness (HealthKit), Meal Planner (week-ahead), Goal Planner, and the
+// Exercise Library. Settings stays pinned at the bottom.
 const SECTIONS: MoreSection[] = [
   {
     label: 'ANALYZE',
     caption: 'Look at what already happened',
     items: [
       {
-        href: '/progress',
-        label: 'Progress',
-        description: 'Weight, body comp, macros',
-        Icon: TrendingUp,
-        pro: true,
-      },
-      {
-        href: '/activity',
-        label: 'Activity',
-        description: 'Logging consistency calendar',
-        Icon: CalendarHeart,
-      },
-      {
         href: '/fitness',
         label: 'Fitness',
         description: 'Apple Watch · HR · burn',
         Icon: Heart,
-      },
-      {
-        href: '/measurements',
-        label: 'Measurements',
-        description: 'Track every metric',
-        Icon: Ruler,
-      },
-      {
-        href: '/calculators',
-        label: 'Calculators',
-        description: 'Macros and 1RM',
-        Icon: Calculator,
       },
     ],
   },
@@ -106,14 +84,6 @@ const SECTIONS: MoreSection[] = [
         description: 'Cut · maintain · bulk',
         Icon: Target,
         pro: true,
-      },
-      {
-        href: '/workouts',
-        label: 'Workouts',
-        description: 'Templates & history',
-        Icon: Dumbbell,
-        pro: true,
-        tryFree: true,
       },
     ],
   },
@@ -141,6 +111,7 @@ const SETTINGS_ITEM: MoreItem = {
 export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref) {
   const router = useRouter();
   const { isPro } = useSubscription();
+  const t = useTokens();
   const snapPoints = useMemo(() => ['88%'], []);
 
   const handleDismiss = useCallback(() => {
@@ -174,8 +145,14 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
     <BottomSheetModal
       ref={ref}
       snapPoints={snapPoints}
-      backgroundStyle={styles.sheetBg}
-      handleIndicatorStyle={styles.handle}
+      // Sheet wears the page color so the cards inside read as elevated
+      // surfaces (matches the dashboard pattern: white cards on cream page
+      // in light mode, dark cards on near-black page in dark mode).
+      backgroundStyle={[styles.sheetBg, { backgroundColor: t.bgPage }]}
+      handleIndicatorStyle={[
+        styles.handle,
+        { backgroundColor: t.textQuaternary },
+      ]}
       backdropComponent={renderBackdrop}
     >
       <BottomSheetScrollView
@@ -187,25 +164,35 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
           <Pressable
             onPress={handleDismiss}
             hitSlop={12}
-            style={styles.closeBtn}
+            style={[
+              styles.closeBtn,
+              { backgroundColor: t.bgCardElevated },
+            ]}
             accessibilityRole="button"
             accessibilityLabel="Close menu"
           >
-            <X size={16} color={DS.textSecondary} strokeWidth={2} />
+            <X size={16} color={t.textSecondary} strokeWidth={2} />
           </Pressable>
         </View>
 
         {SECTIONS.map((section) => (
           <View key={section.label} style={styles.sectionWrap}>
             <View style={styles.sectionLabelRow}>
-              <Text style={styles.sectionLabel}>{section.label}</Text>
-              <Text style={styles.sectionCaption}>{section.caption}</Text>
+              <Text style={[styles.sectionLabel, { color: t.textTertiary }]}>
+                {section.label}
+              </Text>
+              <Text
+                style={[styles.sectionCaption, { color: t.textQuaternary }]}
+              >
+                {section.caption}
+              </Text>
             </View>
             <View style={styles.grid}>
               {section.items.map((item) => (
                 <MoreCard
                   key={item.label}
                   item={item}
+                  tokens={t}
                   isPro={isPro}
                   onPress={() => navigate(item.href)}
                 />
@@ -218,21 +205,40 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
           onPress={() => navigate(SETTINGS_ITEM.href)}
           style={({ pressed }) => [
             styles.settingsRow,
-            pressed && styles.cardPressed,
+            {
+              backgroundColor: t.bgCard,
+              borderColor: t.borderDefault,
+            },
+            pressed && [
+              styles.cardPressed,
+              { backgroundColor: t.bgCardElevated },
+            ],
           ]}
           accessibilityRole="button"
           accessibilityLabel={SETTINGS_ITEM.label}
         >
-          <View style={styles.settingsIcon}>
-            <SETTINGS_ITEM.Icon size={18} color={DS.accent} strokeWidth={2} />
+          <View
+            style={[
+              styles.settingsIcon,
+              {
+                backgroundColor: t.primaryTintBg,
+                borderColor: t.primaryTintBorder,
+              },
+            ]}
+          >
+            <SETTINGS_ITEM.Icon size={18} color={t.primary} strokeWidth={2} />
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.settingsLabel}>{SETTINGS_ITEM.label}</Text>
-            <Text style={styles.settingsDescription}>
+            <Text style={[styles.settingsLabel, { color: t.textPrimary }]}>
+              {SETTINGS_ITEM.label}
+            </Text>
+            <Text
+              style={[styles.settingsDescription, { color: t.textTertiary }]}
+            >
               {SETTINGS_ITEM.description}
             </Text>
           </View>
-          <ChevronRight size={16} color={DS.textTertiary} strokeWidth={2} />
+          <ChevronRight size={16} color={t.textTertiary} strokeWidth={2} />
         </Pressable>
 
         {/* NOTE: A theme/accent picker used to live here. Replaced by the
@@ -244,11 +250,16 @@ export const MoreSheet = forwardRef<BottomSheetModal>(function MoreSheet(_, ref)
 
 type MoreCardProps = {
   item: MoreItem;
+  /** Passed from the parent — see ModePill in AppearanceSheet.tsx for why
+   *  we thread tokens down instead of calling useTokens() inside the sub-
+   *  component (BottomSheetModal portal doesn't always re-render its
+   *  inner sub-components on theme changes). */
+  tokens: Tokens;
   isPro: boolean;
   onPress: (e: GestureResponderEvent) => void;
 };
 
-function MoreCard({ item, isPro, onPress }: MoreCardProps) {
+function MoreCard({ item, tokens: t, isPro, onPress }: MoreCardProps) {
   const locked = !!item.pro && !isPro;
   const showTryFree = locked && !!item.tryFree;
 
@@ -258,7 +269,14 @@ function MoreCard({ item, isPro, onPress }: MoreCardProps) {
       style={({ pressed }) => [
         styles.cardSlot,
         styles.card,
-        pressed && styles.cardPressed,
+        {
+          backgroundColor: t.bgCard,
+          borderColor: t.borderDefault,
+        },
+        pressed && [
+          styles.cardPressed,
+          { backgroundColor: t.bgCardElevated },
+        ],
       ]}
       accessibilityRole="button"
       accessibilityLabel={
@@ -268,21 +286,53 @@ function MoreCard({ item, isPro, onPress }: MoreCardProps) {
       }
     >
       {showTryFree ? (
-        <View style={styles.tryFreeBadge}>
-          <Text style={styles.tryFreeText}>Try free</Text>
+        <View
+          style={[
+            styles.tryFreeBadge,
+            {
+              backgroundColor: t.primaryTintBg,
+              borderColor: t.primaryTintBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.tryFreeText, { color: t.primary }]}>
+            Try free
+          </Text>
         </View>
       ) : locked ? (
-        <View style={styles.lockBadge}>
-          <Lock size={10} color={DS.textTertiary} strokeWidth={2} />
+        <View
+          style={[
+            styles.lockBadge,
+            {
+              backgroundColor: t.bgCard,
+              borderColor: t.borderDefault,
+            },
+          ]}
+        >
+          <Lock size={10} color={t.textTertiary} strokeWidth={2} />
         </View>
       ) : null}
-      <View style={styles.cardIcon}>
-        <item.Icon size={18} color={DS.accent} strokeWidth={2} />
+      <View
+        style={[
+          styles.cardIcon,
+          {
+            backgroundColor: t.primaryTintBg,
+            borderColor: t.primaryTintBorder,
+          },
+        ]}
+      >
+        <item.Icon size={18} color={t.primary} strokeWidth={2} />
       </View>
-      <Text style={styles.cardLabel} numberOfLines={1}>
+      <Text
+        style={[styles.cardLabel, { color: t.textPrimary }]}
+        numberOfLines={1}
+      >
         {item.label}
       </Text>
-      <Text style={styles.cardDescription} numberOfLines={2}>
+      <Text
+        style={[styles.cardDescription, { color: t.textTertiary }]}
+        numberOfLines={2}
+      >
         {item.description}
       </Text>
     </Pressable>
@@ -291,10 +341,9 @@ function MoreCard({ item, isPro, onPress }: MoreCardProps) {
 
 const styles = StyleSheet.create({
   sheetBg: {
-    backgroundColor: DS.surface,
+    // backgroundColor inline from tokens
   },
   handle: {
-    backgroundColor: DS.border,
     width: 36,
     height: 4,
   },
@@ -317,7 +366,6 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 8,
-    backgroundColor: DS.surfaceFlat,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -332,13 +380,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionLabel: {
-    color: DS.textTertiary,
     fontFamily: Font.bold,
     fontSize: 10,
     letterSpacing: 0.8,
   },
   sectionCaption: {
-    color: DS.textQuaternary,
     fontFamily: Font.medium,
     fontSize: 10,
   },
@@ -353,8 +399,6 @@ const styles = StyleSheet.create({
     minHeight: 108,
   },
   card: {
-    backgroundColor: DS.bg,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
     paddingVertical: 14,
@@ -364,27 +408,22 @@ const styles = StyleSheet.create({
   },
   cardPressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: DS.surfaceFlat,
   },
   cardIcon: {
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 2,
   },
   cardLabel: {
-    color: DS.text,
     fontFamily: Font.bold,
     fontSize: 13,
     letterSpacing: -0.2,
   },
   cardDescription: {
-    color: DS.textTertiary,
     fontFamily: Font.medium,
     fontSize: 10,
     lineHeight: 13,
@@ -393,8 +432,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 999,
     width: 22,
@@ -406,15 +443,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 8,
     right: 8,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     borderRadius: 999,
     paddingHorizontal: 8,
     paddingVertical: 3,
   },
   tryFreeText: {
-    color: DS.accent,
     fontFamily: Font.bold,
     fontSize: 9,
     letterSpacing: 0.4,
@@ -426,8 +460,6 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingVertical: 14,
     paddingHorizontal: 14,
-    backgroundColor: DS.bg,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: Radius.card,
   },
@@ -435,26 +467,18 @@ const styles = StyleSheet.create({
     width: 38,
     height: 38,
     borderRadius: 10,
-    backgroundColor: DS.accentSoft,
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
   settingsLabel: {
-    color: DS.text,
     fontFamily: Font.bold,
     fontSize: 14,
     letterSpacing: -0.2,
   },
   settingsDescription: {
-    color: DS.textTertiary,
     fontFamily: Font.medium,
     fontSize: 11,
     marginTop: 2,
   },
 });
-
-// NOTE: I removed the unused Activity import? — keeping it imported for the
-// next pass when "Workouts" can branch to a separate activity dashboard view.
-void Activity;

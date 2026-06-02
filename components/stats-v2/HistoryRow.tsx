@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
 import { MoreHorizontal, Trash2 } from 'lucide-react-native';
-import { DS, Font, Tabular } from '../../lib/design-system';
+import { Font, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { fmtShortMonthDay } from '../../lib/date';
 
 const DESTRUCTIVE = '#E5736A';
@@ -36,12 +37,6 @@ function fmtDelta(n: number): string {
   return `${sign}${Math.abs(n).toFixed(1)}`;
 }
 
-/** Cutting direction (weight loss) = emerald. Gaining = tan. */
-function deltaColor(n: number): string {
-  if (n === 0) return DS.textTertiary;
-  return n < 0 ? DS.accent : NEUTRAL_NEG;
-}
-
 export default function HistoryRow({
   entry,
   isLast,
@@ -54,12 +49,24 @@ export default function HistoryRow({
   onConfirmDelete,
   onCancelDelete,
 }: Props) {
+  const t = useTokens();
+
+  /** Cutting direction (weight loss) = emerald. Gaining = tan. */
+  const deltaColor = (n: number): string => {
+    if (n === 0) return t.textTertiary;
+    return n < 0 ? t.primary : NEUTRAL_NEG;
+  };
+
   if (isPendingDelete) {
     return (
       <View
-        style={[styles.row, styles.confirmRow, !isLast && styles.rowDivider]}
+        style={[
+          styles.row,
+          styles.confirmRow,
+          !isLast && [styles.rowDivider, { borderBottomColor: t.borderSubtle }],
+        ]}
       >
-        <Text style={styles.confirmText}>Delete this entry?</Text>
+        <Text style={[styles.confirmText, { color: t.textPrimary }]}>Delete this entry?</Text>
         <View style={styles.confirmActions}>
           <Pressable
             onPress={onCancelDelete}
@@ -67,12 +74,13 @@ export default function HistoryRow({
             style={({ pressed }) => [
               styles.confirmBtn,
               styles.confirmBtnCancel,
+              { borderColor: t.borderDefault },
               pressed && styles.pressed,
             ]}
             accessibilityRole="button"
             accessibilityLabel="Cancel delete"
           >
-            <Text style={styles.confirmCancelText}>Cancel</Text>
+            <Text style={[styles.confirmCancelText, { color: t.textSecondary }]}>Cancel</Text>
           </Pressable>
           <Pressable
             onPress={onConfirmDelete}
@@ -97,20 +105,20 @@ export default function HistoryRow({
   }
 
   return (
-    <View style={[styles.row, !isLast && styles.rowDivider]}>
+    <View style={[styles.row, !isLast && [styles.rowDivider, { borderBottomColor: t.borderSubtle }]]}>
       {/* Date */}
       <View style={styles.dateCol}>
-        <Text style={styles.dateMain}>{fmtShortDate(entry.date)}</Text>
-        <Text style={[styles.dateYear, Tabular]}>{entry.date.slice(0, 4)}</Text>
+        <Text style={[styles.dateMain, { color: t.textPrimary }]}>{fmtShortDate(entry.date)}</Text>
+        <Text style={[styles.dateYear, Tabular, { color: t.textTertiary }]}>{entry.date.slice(0, 4)}</Text>
       </View>
 
       {/* Weight */}
       <View style={styles.metricCol}>
         <View style={styles.metricValueRow}>
-          <Text style={[styles.metricValue, Tabular]}>
+          <Text style={[styles.metricValue, Tabular, { color: t.textPrimary }]}>
             {entry.weight.toFixed(1)}
           </Text>
-          <Text style={styles.metricUnit}>lb</Text>
+          <Text style={[styles.metricUnit, { color: t.textTertiary }]}>lb</Text>
         </View>
         {entry.weightDelta != null ? (
           <Text
@@ -130,10 +138,10 @@ export default function HistoryRow({
         {entry.bodyFat != null ? (
           <>
             <View style={styles.metricValueRow}>
-              <Text style={[styles.metricValue, Tabular]}>
+              <Text style={[styles.metricValue, Tabular, { color: t.textPrimary }]}>
                 {entry.bodyFat.toFixed(1)}
               </Text>
-              <Text style={styles.metricUnit}>%</Text>
+              <Text style={[styles.metricUnit, { color: t.textTertiary }]}>%</Text>
             </View>
             {entry.bodyFatDelta != null ? (
               <Text
@@ -148,7 +156,7 @@ export default function HistoryRow({
             ) : null}
           </>
         ) : (
-          <Text style={styles.metricMissing}>—</Text>
+          <Text style={[styles.metricMissing, { color: t.textQuaternary }]}>—</Text>
         )}
       </View>
 
@@ -158,16 +166,22 @@ export default function HistoryRow({
           onPress={onOpenMenu}
           style={({ pressed }) => [
             styles.kebabBtn,
-            (isMenuOpen || pressed) && styles.kebabBtnActive,
+            (isMenuOpen || pressed) && [styles.kebabBtnActive, { backgroundColor: t.borderDefault }],
           ]}
           accessibilityRole="button"
           accessibilityLabel="Entry options"
           accessibilityState={{ expanded: isMenuOpen }}
         >
-          <MoreHorizontal size={14} color={DS.textTertiary} strokeWidth={2} />
+          <MoreHorizontal size={14} color={t.textTertiary} strokeWidth={2} />
         </Pressable>
         {isMenuOpen ? (
-          <View style={styles.menu} accessibilityRole="menu">
+          <View
+            style={[
+              styles.menu,
+              { backgroundColor: t.bgCardElevated, borderColor: t.borderStrong },
+            ]}
+            accessibilityRole="menu"
+          >
             <Pressable
               onPress={onEdit}
               style={({ pressed }) => [
@@ -177,9 +191,9 @@ export default function HistoryRow({
               accessibilityRole="menuitem"
               accessibilityLabel="Edit entry"
             >
-              <Text style={styles.menuItemText}>Edit entry</Text>
+              <Text style={[styles.menuItemText, { color: t.textPrimary }]}>Edit entry</Text>
             </Pressable>
-            <View style={styles.menuDivider} />
+            <View style={[styles.menuDivider, { backgroundColor: t.borderStrong }]} />
             <Pressable
               onPress={onRequestDelete}
               style={({ pressed }) => [
@@ -214,7 +228,6 @@ const styles = StyleSheet.create({
   },
   rowDivider: {
     borderBottomWidth: 1,
-    borderBottomColor: DS.divider,
   },
   dateCol: {
     width: 64,
@@ -222,12 +235,10 @@ const styles = StyleSheet.create({
   dateMain: {
     fontFamily: Font.semibold,
     fontSize: 12,
-    color: DS.text,
   },
   dateYear: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: '#555',
     marginTop: 1,
   },
   metricCol: {
@@ -241,12 +252,10 @@ const styles = StyleSheet.create({
   metricValue: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   metricUnit: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: DS.textTertiary,
   },
   metricDelta: {
     fontFamily: Font.semibold,
@@ -256,7 +265,6 @@ const styles = StyleSheet.create({
   metricMissing: {
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.textQuaternary,
   },
   kebabWrap: {
     position: 'relative',
@@ -269,9 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: 'transparent',
   },
-  kebabBtnActive: {
-    backgroundColor: DS.border,
-  },
+  kebabBtnActive: {},
   pressed: {
     opacity: 0.7,
   },
@@ -281,8 +287,6 @@ const styles = StyleSheet.create({
     top: 32,
     zIndex: 50,
     minWidth: 144,
-    backgroundColor: '#141414',
-    borderColor: '#2A2A2A',
     borderWidth: 1,
     borderRadius: 10,
     paddingVertical: 4,
@@ -305,13 +309,11 @@ const styles = StyleSheet.create({
   menuItemText: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.text,
   },
   menuDivider: {
     height: 1,
     marginHorizontal: 8,
     marginVertical: 4,
-    backgroundColor: '#2A2A2A',
   },
   // Inline confirm row
   confirmRow: {
@@ -321,7 +323,6 @@ const styles = StyleSheet.create({
   confirmText: {
     fontFamily: Font.semibold,
     fontSize: 13,
-    color: DS.text,
   },
   confirmActions: {
     flexDirection: 'row',
@@ -337,7 +338,6 @@ const styles = StyleSheet.create({
     minWidth: 76,
   },
   confirmBtnCancel: {
-    borderColor: DS.border,
     backgroundColor: 'transparent',
   },
   confirmBtnDelete: {
@@ -347,7 +347,6 @@ const styles = StyleSheet.create({
   confirmCancelText: {
     fontFamily: Font.semibold,
     fontSize: 12,
-    color: DS.textSecondary,
   },
   confirmDeleteText: {
     fontFamily: Font.bold,

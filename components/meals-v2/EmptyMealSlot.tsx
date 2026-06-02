@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
-import { DS, Font, Radius } from '../../lib/design-system';
+import { Font, Radius } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import type { MealType } from '../../hooks/useMealPlanWeek';
 import {
   PERIOD_ICONS,
@@ -29,25 +30,30 @@ const SLOT_CTA: Record<MealType, string> = {
 };
 
 export default function EmptyMealSlot({ mealType, onPress }: Props) {
+  const t = useTokens();
   const period = periodFromMealType(mealType);
   const Icon = PERIOD_ICONS[period];
   return (
     <View style={styles.outer}>
       <View style={styles.slotRow}>
         <View style={styles.slotLeft}>
-          <Icon size={14} color={DS.textQuaternary} strokeWidth={2} />
-          <Text style={styles.slotName}>{SLOT_TITLE[mealType]}</Text>
+          <Icon size={14} color={t.textQuaternary} strokeWidth={2} />
+          <Text style={[styles.slotName, { color: t.textTertiary }]}>{SLOT_TITLE[mealType]}</Text>
         </View>
-        <Text style={styles.empty}>Empty</Text>
+        <Text style={[styles.empty, { color: t.textQuaternary }]}>Empty</Text>
       </View>
       <Pressable
         onPress={onPress}
-        style={({ pressed }) => [styles.btn, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.btn,
+          { backgroundColor: t.bgCard, borderColor: t.borderStrong },
+          pressed && styles.pressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={SLOT_CTA[mealType]}
       >
-        <Plus size={16} color={DS.textTertiary} strokeWidth={2} />
-        <Text style={styles.btnLabel}>{SLOT_CTA[mealType]}</Text>
+        <Plus size={16} color={t.textTertiary} strokeWidth={2} />
+        <Text style={[styles.btnLabel, { color: t.textSecondary }]}>{SLOT_CTA[mealType]}</Text>
       </Pressable>
     </View>
   );
@@ -73,14 +79,12 @@ const styles = StyleSheet.create({
   slotName: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
     letterSpacing: 1,
     textTransform: 'uppercase',
   },
   empty: {
     fontFamily: Font.medium,
     fontSize: 11,
-    color: DS.textQuaternary,
   },
   btn: {
     flexDirection: 'row',
@@ -89,10 +93,8 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 16,
     borderRadius: Radius.card,
-    backgroundColor: DS.surface,
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: '#2A2A2A',
   },
   pressed: {
     transform: [{ scale: 0.99 }],
@@ -100,6 +102,5 @@ const styles = StyleSheet.create({
   btnLabel: {
     fontFamily: Font.semibold,
     fontSize: 13,
-    color: DS.textSecondary,
   },
 });

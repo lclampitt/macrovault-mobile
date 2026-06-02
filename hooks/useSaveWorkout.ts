@@ -50,6 +50,11 @@ export function useSaveWorkout() {
 
         const exercises = state.exercises.map((ex) => ({
           name: ex.name,
+          // Persist the per-session skipped flag so the next session of this
+          // template can surface the "Last: skipped" hint. Old web rows
+          // without this field default to false on read.
+          skipped: !!ex.skipped,
+          skipped_at: ex.skippedAt ?? null,
           sets: ex.sets
             .filter((s) => s.weight.trim() !== '' || s.reps.trim() !== '')
             .map((s) => ({

@@ -14,7 +14,8 @@ import DateTimePicker, {
   type DateTimePickerEvent,
 } from '@react-native-community/datetimepicker';
 import { LinearGradient } from 'expo-linear-gradient';
-import { DS, Font, Radius, Shadow } from '../../lib/design-system';
+import { Font, Radius, Shadow } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   /** YYYY-MM-DD prefilled date — defaults to today on first open. */
@@ -63,6 +64,7 @@ export default function EntryForm({
   onCancel,
   onSubmit,
 }: Props) {
+  const t = useTokens();
   const [date, setDate] = useState(initialDate);
   const [weight, setWeight] = useState(initialWeight);
   const [bodyFat, setBodyFat] = useState(initialBodyFat);
@@ -96,12 +98,9 @@ export default function EntryForm({
         .damping(20)}
       style={styles.outer}
     >
-      <View style={styles.card}>
+      <View style={[styles.card, { backgroundColor: t.bgCard, borderColor: t.primaryTintBorder }]}>
         <LinearGradient
-          colors={[
-            'rgba(16, 185, 129, 0.06)',
-            'rgba(16, 185, 129, 0.02)',
-          ]}
+          colors={t.gradientCardTinted}
           start={{ x: 0, y: 0 }}
           end={{ x: 0, y: 1 }}
           pointerEvents="none"
@@ -109,58 +108,62 @@ export default function EntryForm({
         />
 
         <View style={styles.header}>
-          <Text style={styles.title}>New entry</Text>
+          <Text style={[styles.title, { color: t.textPrimary }]}>New entry</Text>
           <Pressable onPress={onCancel} hitSlop={8}>
-            <Text style={styles.cancel}>Cancel</Text>
+            <Text style={[styles.cancel, { color: t.textSecondary }]}>Cancel</Text>
           </Pressable>
         </View>
 
         {/* Date */}
-        <Text style={styles.label}>DATE</Text>
+        <Text style={[styles.label, { color: t.textTertiary }]}>DATE</Text>
         <Pressable
           onPress={() => {
             if (lockDate) return;
             setDraftDate(toDate(date));
             setPickerOpen(true);
           }}
-          style={[styles.input, lockDate && styles.inputDisabled]}
+          style={[
+            styles.input,
+            { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+            lockDate && styles.inputDisabled,
+          ]}
           accessibilityRole="button"
           accessibilityLabel={`Date ${fmtLongDate(date)}`}
         >
-          <Calendar size={14} color={DS.textTertiary} strokeWidth={2} />
-          <Text style={styles.inputValue}>{fmtLongDate(date)}</Text>
+          <Calendar size={14} color={t.textTertiary} strokeWidth={2} />
+          <Text style={[styles.inputValue, { color: t.textPrimary }]}>{fmtLongDate(date)}</Text>
         </Pressable>
 
         {/* Weight + BF row */}
         <View style={styles.rowGrid}>
           <View style={styles.gridCol}>
-            <Text style={styles.label}>WEIGHT</Text>
-            <View style={styles.input}>
+            <Text style={[styles.label, { color: t.textTertiary }]}>WEIGHT</Text>
+            <View style={[styles.input, { backgroundColor: t.bgCard, borderColor: t.borderDefault }]}>
               <TextInput
                 value={weight}
                 onChangeText={setWeight}
                 placeholder="180"
-                placeholderTextColor={DS.textTertiary}
+                placeholderTextColor={t.textTertiary}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
-                style={styles.numberInput}
+                style={[styles.numberInput, { color: t.textPrimary }]}
               />
-              <Text style={styles.unit}>lb</Text>
+              <Text style={[styles.unit, { color: t.textTertiary }]}>lb</Text>
             </View>
           </View>
           <View style={styles.gridCol}>
-            <Text style={styles.label}>BODY FAT</Text>
-            <View style={styles.input}>
+            <Text style={[styles.label, { color: t.textTertiary }]}>BODY FAT</Text>
+            <View style={[styles.input, { backgroundColor: t.bgCard, borderColor: t.borderDefault }]}>
               <TextInput
                 value={bodyFat}
                 onChangeText={setBodyFat}
                 placeholder="16.8"
-                placeholderTextColor={DS.textTertiary}
+                placeholderTextColor={t.textTertiary}
                 keyboardType="decimal-pad"
                 inputMode="decimal"
-                style={styles.numberInput}
+                style={[styles.numberInput, { color: t.textPrimary }]}
               />
-              <Text style={styles.unit}>%</Text>
+              <Text style={[styles.unit, { color: t.textTertiary }]}>%</Text>
             </View>
           </View>
         </View>
@@ -176,8 +179,10 @@ export default function EntryForm({
           disabled={saving}
           style={({ pressed }) => [
             styles.saveBtn,
+            { backgroundColor: t.primary },
             Shadow.emeraldGlow,
             styles.saveBtnRing,
+            { borderColor: t.primaryBorderStrong },
             saving && styles.saveBtnDisabled,
             pressed && !saving && styles.saveBtnPressed,
           ]}
@@ -185,13 +190,13 @@ export default function EntryForm({
           accessibilityLabel="Save entry"
         >
           {saving ? (
-            <ActivityIndicator size="small" color="#000" />
+            <ActivityIndicator size="small" color={t.textOnPrimary} />
           ) : (
-            <Text style={styles.saveBtnText}>Save entry</Text>
+            <Text style={[styles.saveBtnText, { color: t.textOnPrimary }]}>Save entry</Text>
           )}
         </Pressable>
 
-        <Text style={styles.disclaimer}>
+        <Text style={[styles.disclaimer, { color: t.textTertiary }]}>
           Entries are unique per date — saves will overwrite that day
         </Text>
       </View>
@@ -208,14 +213,14 @@ export default function EntryForm({
           onPress={() => setPickerOpen(false)}
         >
           <Pressable
-            style={styles.modalSheet}
+            style={[styles.modalSheet, { backgroundColor: t.bgCard }]}
             onPress={(e) => e.stopPropagation()}
           >
-            <View style={styles.modalHeader}>
+            <View style={[styles.modalHeader, { borderBottomColor: t.borderDefault }]}>
               <Pressable onPress={() => setPickerOpen(false)} hitSlop={8}>
-                <Text style={styles.modalCancel}>Cancel</Text>
+                <Text style={[styles.modalCancel, { color: t.textSecondary }]}>Cancel</Text>
               </Pressable>
-              <Text style={styles.modalTitle}>Select date</Text>
+              <Text style={[styles.modalTitle, { color: t.textPrimary }]}>Select date</Text>
               <Pressable
                 onPress={() => {
                   setDate(toYmd(draftDate));
@@ -223,7 +228,7 @@ export default function EntryForm({
                 }}
                 hitSlop={8}
               >
-                <Text style={styles.modalDone}>Done</Text>
+                <Text style={[styles.modalDone, { color: t.primary }]}>Done</Text>
               </Pressable>
             </View>
             <DateTimePicker
@@ -234,8 +239,8 @@ export default function EntryForm({
               onChange={(_e: DateTimePickerEvent, picked?: Date) => {
                 if (picked) setDraftDate(picked);
               }}
-              themeVariant="dark"
-              textColor="#FFFFFF"
+              themeVariant={t.statusBarStyle === 'light' ? 'dark' : 'light'}
+              textColor={t.textPrimary}
             />
           </Pressable>
         </Pressable>
@@ -252,8 +257,6 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: Radius.card,
     borderWidth: 1,
-    borderColor: DS.accentBorder,
-    backgroundColor: DS.surface,
     padding: 16,
     overflow: 'hidden',
   },
@@ -269,17 +272,14 @@ const styles = StyleSheet.create({
   title: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: DS.text,
   },
   cancel: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textSecondary,
   },
   label: {
     fontFamily: Font.semibold,
     fontSize: 10,
-    color: DS.textTertiary,
     letterSpacing: 0.6,
     marginBottom: 6,
     marginTop: 8,
@@ -288,8 +288,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: DS.surface,
-    borderColor: DS.border,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
@@ -302,20 +300,17 @@ const styles = StyleSheet.create({
   inputValue: {
     fontFamily: Font.medium,
     fontSize: 13,
-    color: DS.text,
   },
   numberInput: {
     flex: 1,
     fontFamily: Font.bold,
     fontSize: 14,
-    color: DS.text,
     padding: 0,
     fontVariant: ['tabular-nums'],
   },
   unit: {
     fontFamily: Font.semibold,
     fontSize: 11,
-    color: DS.textTertiary,
   },
   rowGrid: {
     flexDirection: 'row',
@@ -327,7 +322,6 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 16,
-    backgroundColor: DS.accent,
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: 'center',
@@ -335,7 +329,6 @@ const styles = StyleSheet.create({
   },
   saveBtnRing: {
     borderWidth: 1,
-    borderColor: DS.accentBorderStrong,
   },
   saveBtnDisabled: {
     opacity: 0.6,
@@ -346,12 +339,10 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontFamily: Font.bold,
     fontSize: 13,
-    color: '#000',
   },
   disclaimer: {
     fontFamily: Font.medium,
     fontSize: 10,
-    color: '#555',
     textAlign: 'center',
     marginTop: 8,
   },
@@ -368,7 +359,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalSheet: {
-    backgroundColor: DS.surface,
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
     paddingBottom: 24,
@@ -380,21 +370,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomWidth: 1,
-    borderBottomColor: DS.border,
   },
   modalTitle: {
     fontFamily: Font.semibold,
     fontSize: 15,
-    color: DS.text,
   },
   modalCancel: {
     fontFamily: Font.medium,
     fontSize: 15,
-    color: DS.textSecondary,
   },
   modalDone: {
     fontFamily: Font.semibold,
     fontSize: 15,
-    color: DS.accent,
   },
 });

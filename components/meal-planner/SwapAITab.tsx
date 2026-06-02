@@ -7,8 +7,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { Feather } from '@expo/vector-icons';
-import { Colors } from '../../constants/Colors';
+import { Plus, RefreshCw, Zap } from 'lucide-react-native';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { useSubscription } from '../../hooks/useSubscription';
 import {
   useMealPlannerAI,
@@ -18,6 +19,8 @@ import type { SwapPayload } from '../../hooks/useMealPlanMutations';
 import type { MealType } from '../../hooks/useMealPlanWeek';
 
 type Props = {
+  /** 0=Mon … 6=Sun — required by the /meal-planner/suggest endpoint. */
+  dayOfWeek: number;
   mealType: MealType;
   remaining: { calories: number; protein: number; carbs: number; fat: number };
   goal: string; // 'cutting' | 'bulking' | 'maintenance'
@@ -26,12 +29,14 @@ type Props = {
 };
 
 export default function SwapAITab({
+  dayOfWeek,
   mealType,
   remaining,
   goal,
   saving,
   onAdd,
 }: Props) {
+  const t = useTokens();
   const { isProPlus, loading: subLoading } = useSubscription();
   const { loading, suggestForSlot } = useMealPlannerAI();
   const [suggestions, setSuggestions] = useState<AISuggestion[]>([]);
@@ -40,6 +45,7 @@ export default function SwapAITab({
   async function loadSuggestions() {
     setError(null);
     const r = await suggestForSlot({
+      dayOfWeek,
       mealType,
       remaining,
       goal,
@@ -63,7 +69,7 @@ export default function SwapAITab({
   if (subLoading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={Colors.accentLight} />
+        <ActivityIndicator color={t.primary} />
       </View>
     );
   }
@@ -71,16 +77,36 @@ export default function SwapAITab({
   if (!isProPlus) {
     return (
       <View style={styles.gate}>
-        <View style={styles.bubble}>
-          <Feather name="zap" size={22} color={Colors.accentLight} />
+        <View
+          style={[
+            styles.bubble,
+            {
+              backgroundColor: t.primaryTintBg,
+              borderColor: t.primaryTintBorder,
+            },
+          ]}
+        >
+          <Zap size={22} color={t.primary} strokeWidth={2} />
         </View>
-        <Text style={styles.gateTitle}>AI Suggest is Pro+ only</Text>
-        <Text style={styles.gateBody}>
+        <Text style={[styles.gateTitle, { color: t.textPrimary }]}>
+          AI Suggest is Pro+ only
+        </Text>
+        <Text style={[styles.gateBody, { color: t.textTertiary }]}>
           Upgrade to Pro+ to get 5 Claude-generated meal options that fit your
           remaining macros for the day.
         </Text>
-        <View style={styles.badge}>
-          <Text style={styles.badgeText}>300 generations / month</Text>
+        <View
+          style={[
+            styles.badge,
+            {
+              backgroundColor: t.primaryTintBg,
+              borderColor: t.primaryTintBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.badgeText, { color: t.primary }]}>
+            300 generations / month
+          </Text>
         </View>
       </View>
     );
@@ -88,8 +114,13 @@ export default function SwapAITab({
 
   return (
     <View style={styles.wrap}>
-      <View style={styles.headerRow}>
-        <Text style={styles.headerText}>
+      <View
+        style={[
+          styles.headerRow,
+          { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+        ]}
+      >
+        <Text style={[styles.headerText, { color: t.textTertiary }]}>
           Targeting {Math.round(remaining.calories)} kcal · P{' '}
           {Math.round(remaining.protein)}g · C {Math.round(remaining.carbs)}g ·
           F {Math.round(remaining.fat)}g
@@ -98,28 +129,49 @@ export default function SwapAITab({
           onPress={loadSuggestions}
           disabled={loading || saving}
           hitSlop={6}
-          style={[styles.refreshBtn, loading && styles.refreshBtnBusy]}
+          style={[
+            styles.refreshBtn,
+            {
+              backgroundColor: t.primaryTintBg,
+              borderColor: t.primaryTintBorder,
+            },
+            loading && styles.refreshBtnBusy,
+          ]}
           accessibilityRole="button"
           accessibilityLabel="Regenerate suggestions"
         >
-          <Feather name="refresh-cw" size={13} color={Colors.accentLight} />
+          <RefreshCw size={13} color={t.primary} strokeWidth={2} />
         </Pressable>
       </View>
 
       {loading ? (
         <View style={styles.center}>
-          <ActivityIndicator color={Colors.accentLight} />
-          <Text style={styles.loadingText}>Generating 5 options…</Text>
+          <ActivityIndicator color={t.primary} />
+          <Text style={[styles.loadingText, { color: t.textTertiary }]}>
+            Generating 5 options…
+          </Text>
         </View>
       ) : error ? (
         <View style={styles.errorWrap}>
-          <Text style={styles.errorText}>{error}</Text>
-          <Pressable onPress={loadSuggestions} style={styles.retryBtn}>
-            <Text style={styles.retryText}>Try again</Text>
+          <Text style={[styles.errorText, { color: t.destructive }]}>
+            {error}
+          </Text>
+          <Pressable
+            onPress={loadSuggestions}
+            style={[
+              styles.retryBtn,
+              { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+            ]}
+          >
+            <Text style={[styles.retryText, { color: t.textSecondary }]}>
+              Try again
+            </Text>
           </Pressable>
         </View>
       ) : suggestions.length === 0 ? (
-        <Text style={styles.emptyText}>No suggestions yet.</Text>
+        <Text style={[styles.emptyText, { color: t.textTertiary }]}>
+          No suggestions yet.
+        </Text>
       ) : (
         <ScrollView
           style={styles.list}
@@ -127,16 +179,28 @@ export default function SwapAITab({
           contentContainerStyle={styles.listContent}
         >
           {suggestions.map((s, i) => (
-            <View key={`${s.meal_name}-${i}`} style={styles.card}>
-              <Text style={styles.cardTitle} numberOfLines={2}>
+            <View
+              key={`${s.meal_name}-${i}`}
+              style={[
+                styles.card,
+                { backgroundColor: t.bgCard, borderColor: t.borderDefault },
+              ]}
+            >
+              <Text
+                style={[styles.cardTitle, { color: t.textPrimary }]}
+                numberOfLines={2}
+              >
                 {s.meal_name}
               </Text>
-              <Text style={styles.cardMacros}>
+              <Text style={[styles.cardMacros, { color: t.primary }]}>
                 {Math.round(s.calories)} kcal · P {Math.round(s.protein)}g · C{' '}
                 {Math.round(s.carbs)}g · F {Math.round(s.fat)}g
               </Text>
               {s.ingredients ? (
-                <Text style={styles.cardIngredients} numberOfLines={3}>
+                <Text
+                  style={[styles.cardIngredients, { color: t.textTertiary }]}
+                  numberOfLines={3}
+                >
                   {s.ingredients}
                 </Text>
               ) : null}
@@ -152,12 +216,19 @@ export default function SwapAITab({
                   })
                 }
                 disabled={saving}
-                style={[styles.addBtn, saving && styles.addBtnDisabled]}
+                style={[
+                  styles.addBtn,
+                  { backgroundColor: t.primary },
+                  t.shadowPrimaryGlow,
+                  saving && styles.addBtnDisabled,
+                ]}
                 accessibilityRole="button"
                 accessibilityLabel={`Add ${s.meal_name}`}
               >
-                <Feather name="plus" size={12} color="#fff" />
-                <Text style={styles.addBtnText}>Add to plan</Text>
+                <Plus size={12} color={t.textOnPrimary} strokeWidth={2.5} />
+                <Text style={[styles.addBtnText, { color: t.textOnPrimary }]}>
+                  Add to plan
+                </Text>
               </Pressable>
             </View>
           ))}
@@ -175,7 +246,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   loadingText: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 12,
   },
   gate: {
@@ -188,18 +259,17 @@ const styles = StyleSheet.create({
     width: 54,
     height: 54,
     borderRadius: 16,
-    backgroundColor: Colors.accentSoft,
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
   },
   gateTitle: {
-    color: Colors.textPrimary,
+    fontFamily: Font.bold,
     fontSize: 15,
-    fontWeight: '700',
   },
   gateBody: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 12,
     lineHeight: 17,
     textAlign: 'center',
@@ -211,13 +281,10 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: Colors.borderAccentSoft,
-    backgroundColor: Colors.accentSofter,
   },
   badgeText: {
-    color: Colors.accentLight,
+    fontFamily: Font.bold,
     fontSize: 10,
-    fontWeight: '700',
     letterSpacing: 0.3,
   },
   headerRow: {
@@ -225,8 +292,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: 8,
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 10,
     paddingHorizontal: 10,
@@ -234,16 +299,14 @@ const styles = StyleSheet.create({
   },
   headerText: {
     flex: 1,
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 11,
   },
   refreshBtn: {
     width: 28,
     height: 28,
     borderRadius: 7,
-    borderColor: Colors.borderAccent,
     borderWidth: 1,
-    backgroundColor: Colors.accentSofter,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -255,7 +318,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
   },
   errorText: {
-    color: Colors.error,
+    fontFamily: Font.medium,
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 17,
@@ -265,16 +328,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.surface,
   },
   retryText: {
-    color: Colors.textSecondary,
+    fontFamily: Font.semibold,
     fontSize: 12,
-    fontWeight: '600',
   },
   emptyText: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 12,
     textAlign: 'center',
     paddingVertical: 30,
@@ -282,8 +342,6 @@ const styles = StyleSheet.create({
   list: { flex: 1 },
   listContent: { paddingBottom: 8 },
   card: {
-    backgroundColor: Colors.surface,
-    borderColor: Colors.border,
     borderWidth: 1,
     borderRadius: 12,
     padding: 12,
@@ -291,18 +349,16 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardTitle: {
-    color: Colors.textPrimary,
+    fontFamily: Font.bold,
     fontSize: 13,
-    fontWeight: '700',
     lineHeight: 18,
   },
   cardMacros: {
-    color: Colors.accentLight,
+    fontFamily: Font.semibold,
     fontSize: 11,
-    fontWeight: '600',
   },
   cardIngredients: {
-    color: Colors.textMuted,
+    fontFamily: Font.medium,
     fontSize: 11,
     lineHeight: 15,
   },
@@ -312,14 +368,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    backgroundColor: Colors.accent,
     borderRadius: 9,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   addBtnDisabled: { opacity: 0.5 },
   addBtnText: {
-    color: '#fff',
+    fontFamily: Font.bold,
     fontSize: 12,
-    fontWeight: '700',
+    letterSpacing: -0.2,
   },
 });

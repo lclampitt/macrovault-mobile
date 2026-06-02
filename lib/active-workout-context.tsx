@@ -29,6 +29,19 @@ export type ActiveExercise = {
   name: string;
   sets: ActiveSet[];
   note?: string;
+  /**
+   * Per-session "skipped" state. Set true when the user taps Skip from the
+   * kebab. Skipped exercises stay in the session (and the template); they
+   * just don't count toward completion + show a dimmed state. Cleared by
+   * tapping the card to resume.
+   */
+  skipped?: boolean;
+  /** ISO timestamp of when the user tapped Skip — used to surface the
+   *  "Last: skipped" hint on the next session of this template. */
+  skippedAt?: string;
+  /** Transient flag (not persisted) set when the previous session of this
+   *  template skipped the same exercise. Drives the inline tan hint. */
+  skippedLastTime?: boolean;
 };
 
 export type ActiveWorkoutState = {
@@ -71,7 +84,10 @@ type SetField = 'weight' | 'reps' | 'completed';
 type ContextValue = {
   state: ActiveWorkoutState;
   start: () => void;
-  loadTemplate: (template: LoadedTemplate) => void;
+  loadTemplate: (
+    template: LoadedTemplate,
+    skippedLastTimeNames?: ReadonlySet<string>,
+  ) => void;
   setName: (name: string) => void;
   setCategory: (category: string | null) => void;
   addExercise: (name: string) => void;
@@ -85,6 +101,8 @@ type ContextValue = {
   ) => void;
   removeSet: (exerciseId: string, setId: string) => void;
   setExerciseNote: (exerciseId: string, note: string) => void;
+  /** Toggle the per-session skipped flag for an exercise. Idempotent. */
+  setExerciseSkipped: (exerciseId: string, skipped: boolean) => void;
   reorderExercises: (fromIndex: number, toIndex: number) => void;
   setNotes: (notes: string) => void;
   reset: () => void;
@@ -98,39 +116,57 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
   const start = useCallback(() => setState(freshState()), []);
   const reset = useCallback(() => setState(freshState()), []);
 
-  const loadTemplate = useCallback((template: LoadedTemplate) => {
-    const exercises: ActiveExercise[] = (template.exercises ?? []).map((ex) => {
-      const sets: ActiveSet[] =
-        Array.isArray(ex.sets) && ex.sets.length > 0
-          ? ex.sets.map((s) => {
-              const w = s.weight != null ? String(s.weight) : '';
-              const r = s.reps != null ? String(s.reps) : '';
-              // Pre-fill weight/reps AND remember them as the "previous"
-              // reference so the Last column renders e.g. "135×12" on
-              // next load. Tapping that ref re-fills the inputs if the
-              // user clears them.
-              return {
-                id: localId('set'),
-                weight: w,
-                reps: r,
-                completed: false,
-                prevWeight: w || undefined,
-                prevReps: r || undefined,
-              };
-            })
-          : [blankSet()];
-      return { id: localId('ex'), name: ex.name, sets };
-    });
-    setState({
-      name: template.name,
-      category: template.muscle_group || null,
-      exercises,
-      notes: '',
-      startedAt: Date.now(),
-      templateId: template.id,
-      templateName: template.name,
-    });
-  }, []);
+  const loadTemplate = useCallback(
+    (
+      template: LoadedTemplate,
+      /**
+       * Optional set of exercise names that the most recent prior session
+       * of this template marked as skipped. Drives the inline "Last:
+       * skipped" hint shown next to the exercise name on the new session.
+       */
+      skippedLastTimeNames?: ReadonlySet<string>,
+    ) => {
+      const exercises: ActiveExercise[] = (template.exercises ?? []).map(
+        (ex) => {
+          const sets: ActiveSet[] =
+            Array.isArray(ex.sets) && ex.sets.length > 0
+              ? ex.sets.map((s) => {
+                  const w = s.weight != null ? String(s.weight) : '';
+                  const r = s.reps != null ? String(s.reps) : '';
+                  // Pre-fill weight/reps AND remember them as the "previous"
+                  // reference so the Last column renders e.g. "135×12" on
+                  // next load. Tapping that ref re-fills the inputs if the
+                  // user clears them.
+                  return {
+                    id: localId('set'),
+                    weight: w,
+                    reps: r,
+                    completed: false,
+                    prevWeight: w || undefined,
+                    prevReps: r || undefined,
+                  };
+                })
+              : [blankSet()];
+          return {
+            id: localId('ex'),
+            name: ex.name,
+            sets,
+            skippedLastTime: skippedLastTimeNames?.has(ex.name) ?? false,
+          };
+        },
+      );
+      setState({
+        name: template.name,
+        category: template.muscle_group || null,
+        exercises,
+        notes: '',
+        startedAt: Date.now(),
+        templateId: template.id,
+        templateName: template.name,
+      });
+    },
+    [],
+  );
 
   const setName = useCallback(
     (name: string) => setState((s) => ({ ...s, name })),
@@ -180,16 +216,22 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
     ) => {
       setState((s) => ({
         ...s,
-        exercises: s.exercises.map((e) =>
-          e.id !== exerciseId
-            ? e
-            : {
-                ...e,
-                sets: e.sets.map((set) =>
-                  set.id !== setId ? set : { ...set, [field]: value },
-                ),
-              },
-        ),
+        exercises: s.exercises.map((e) => {
+          if (e.id !== exerciseId) return e;
+          // Marking a set complete is the user's "I'm doing this exercise
+          // today" signal — clear the `Last: skipped` hint permanently for
+          // the rest of the session, even if the set is later un-completed.
+          // Spec: "The hint does NOT reappear during the session even if
+          // the user un-logs all their completed sets."
+          const clearHint = field === 'completed' && value === true;
+          return {
+            ...e,
+            sets: e.sets.map((set) =>
+              set.id !== setId ? set : { ...set, [field]: value },
+            ),
+            skippedLastTime: clearHint ? false : e.skippedLastTime,
+          };
+        }),
       }));
     },
     [],
@@ -214,6 +256,28 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
       ),
     }));
   }, []);
+
+  const setExerciseSkipped = useCallback(
+    (exerciseId: string, skipped: boolean) => {
+      setState((s) => ({
+        ...s,
+        exercises: s.exercises.map((e) =>
+          e.id === exerciseId
+            ? {
+                ...e,
+                skipped,
+                skippedAt: skipped ? new Date().toISOString() : undefined,
+                // Tapping skip OR resume clears the "Last: skipped" hint —
+                // either the user is acting on it, or they're explicitly
+                // re-skipping (in which case the SKIPPED badge takes over).
+                skippedLastTime: false,
+              }
+            : e,
+        ),
+      }));
+    },
+    [],
+  );
 
   const reorderExercises = useCallback(
     (fromIndex: number, toIndex: number) => {
@@ -249,6 +313,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
       updateSet,
       removeSet,
       setExerciseNote,
+      setExerciseSkipped,
       reorderExercises,
       setNotes,
       reset,
@@ -265,6 +330,7 @@ export function ActiveWorkoutProvider({ children }: { children: ReactNode }) {
       updateSet,
       removeSet,
       setExerciseNote,
+      setExerciseSkipped,
       reorderExercises,
       setNotes,
       reset,

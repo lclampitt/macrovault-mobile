@@ -18,7 +18,8 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { DS, Font } from '../../lib/design-system';
+import { Font } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { fmtShortMonthDay } from '../../lib/date';
 
 const AnimatedPath = Animated.createAnimatedComponent(Path);
@@ -44,6 +45,7 @@ const INNER_H = CHART_H - PAD_T - PAD_B;
 const fmtShortDate = fmtShortMonthDay;
 
 export default function BodyCompChartV2({ entries, metric }: Props) {
+  const t = useTokens();
   const minVal = Math.min(...entries.map((e) => e.value));
   const maxVal = Math.max(...entries.map((e) => e.value));
   const valRange = maxVal - minVal || 1;
@@ -133,8 +135,8 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
       >
         <Defs>
           <LinearGradient id="chartArea" x1="0" y1="0" x2="0" y2="1">
-            <Stop offset="0" stopColor={DS.accent} stopOpacity={0.25} />
-            <Stop offset="1" stopColor={DS.accent} stopOpacity={0} />
+            <Stop offset="0" stopColor={t.chartFillStart} stopOpacity={1} />
+            <Stop offset="1" stopColor={t.chartFillEnd} stopOpacity={1} />
           </LinearGradient>
         </Defs>
 
@@ -147,7 +149,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
               y1={PAD_T + p * INNER_H}
               x2={PAD_L + INNER_W}
               y2={PAD_T + p * INNER_H}
-              stroke="#141414"
+              stroke={t.chartGrid}
               strokeWidth={1}
               strokeDasharray={i === 0 || i === 4 ? undefined : '2 4'}
             />
@@ -165,7 +167,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
               textAnchor="end"
               fontSize={9}
               fontWeight="500"
-              fill="#444"
+              fill={t.chartAxisLabel}
               fontFamily={Font.medium}
             >
               {metric === 'weight' ? val.toFixed(0) : val.toFixed(1)}
@@ -180,7 +182,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
             <AnimatedPath
               d={linePath}
               fill="none"
-              stroke={DS.accent}
+              stroke={t.primary}
               strokeWidth={2}
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -200,7 +202,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
                   cx={p.x}
                   cy={p.y}
                   r={8}
-                  fill={DS.accent}
+                  fill={t.primary}
                   animatedProps={haloProps}
                 />
               ) : null}
@@ -208,8 +210,8 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
                 cx={p.x}
                 cy={p.y}
                 r={isLast ? 3 : 2}
-                fill={isLast ? DS.accent : DS.surface}
-                stroke={DS.accent}
+                fill={isLast ? t.primary : t.bgCard}
+                stroke={t.primary}
                 strokeWidth={isLast ? 0 : 1.5}
               />
             </G>
@@ -225,7 +227,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
               textAnchor="start"
               fontSize={9}
               fontWeight="500"
-              fill="#444"
+              fill={t.chartAxisLabel}
               fontFamily={Font.medium}
             >
               {fmtShortDate(points[0].date)}
@@ -236,7 +238,7 @@ export default function BodyCompChartV2({ entries, metric }: Props) {
               textAnchor="end"
               fontSize={9}
               fontWeight="500"
-              fill={DS.accent}
+              fill={t.primary}
               fontFamily={Font.medium}
             >
               {fmtShortDate(points[points.length - 1].date)}

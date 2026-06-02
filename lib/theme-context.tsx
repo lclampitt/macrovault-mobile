@@ -17,9 +17,27 @@ import {
   type Theme,
   type ThemeMode,
 } from './theme';
+import {
+  DEFAULT_TOKENS,
+  tokensFor,
+  type AppearanceTheme,
+  type Tokens,
+} from './tokens';
 
 const MODE_KEY = 'macrovault-theme-mode';
 const ACCENT_KEY = 'macrovault-theme-accent';
+
+/**
+ * Map the legacy accent id to the new high-level Appearance theme used by
+ * the semantic token system. Sakura is its own palette; everything else
+ * (teal, blue, orange, violet, retros) falls under Emerald for tokens.
+ *
+ * The legacy `Theme` from buildTheme still honors every individual accent
+ * — only the new token system collapses them to two aesthetics.
+ */
+function appearanceThemeFor(accent: AccentId): AppearanceTheme {
+  return accent === 'rose' ? 'sakura' : 'emerald';
+}
 
 /** Free tier: Teal only (Dark or Light). Everything else is Pro. */
 function canUseAccent(accent: AccentId, isPro: boolean): boolean {
@@ -31,6 +49,9 @@ function canUseLight(accent: AccentId): boolean {
 }
 
 type ThemeContextValue = {
+  // Legacy `Colors`-style palette — kept stable so the ~85 files still
+  // consuming `useTheme().theme` (auth flows, settings sub-pages, etc.)
+  // keep working without changes.
   theme: Theme;
   mode: ThemeMode;
   accent: AccentId;
@@ -40,6 +61,10 @@ type ThemeContextValue = {
   /** True when this accent requires Pro and the user isn't Pro. */
   isAccentLocked: (a: AccentId) => boolean;
   accentSupportsLight: (a: AccentId) => boolean;
+
+  // New semantic-token surface — components opt in via `useTokens()`.
+  appearanceTheme: AppearanceTheme;
+  tokens: Tokens;
 };
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
@@ -130,7 +155,19 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setAccent = useCallback(
     (a: AccentId) => {
       if (!canUseAccent(a, isPro)) return; // gated; caller shows upsell
-      const nextMode = !canUseLight(a) && mode === 'light' ? 'dark' : mode;
+      // Mode resolution rules:
+      //   • Sakura (rose) is LIGHT-ONLY → snap to 'light' regardless of
+      //     prior mode. Spec: "ThemeProvider correctly enforces mode:
+      //     'light' when accent is 'sakura'".
+      //   • Retro accents (xp-aqua, myspace, y2k-chrome) are DARK-ONLY →
+      //     snap to 'dark' if we were in light.
+      //   • Otherwise preserve the current mode.
+      let nextMode = mode;
+      if (a === 'rose') {
+        nextMode = 'light';
+      } else if (!canUseLight(a) && mode === 'light') {
+        nextMode = 'dark';
+      }
       setAccentState(a);
       setModeState(nextMode);
       void persist(nextMode, a);
@@ -140,6 +177,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const setMode = useCallback(
     (m: ThemeMode) => {
+      // Sakura (rose) is light-only — block any attempt to flip its mode
+      // to dark. The AppearanceSheet already prevents this UI-side via
+      // the disabled-Dark pill, but other callers (deep links, hot reload
+      // restore, etc.) need the guard too.
+      if (accent === 'rose' && m === 'dark') return;
       if (m === 'light' && !canUseLight(accent)) return;
       setModeState(m);
       void persist(m, accent);
@@ -148,6 +190,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   );
 
   const theme = useMemo(() => buildTheme(mode, accent), [mode, accent]);
+  const appearanceTheme = useMemo(
+    () => appearanceThemeFor(accent),
+    [accent],
+  );
+  const tokens = useMemo(
+    () => tokensFor(mode, appearanceTheme),
+    [mode, appearanceTheme],
+  );
 
   const value = useMemo<ThemeContextValue>(
     () => ({
@@ -159,8 +209,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       setAccent,
       isAccentLocked: (a: AccentId) => !canUseAccent(a, isPro),
       accentSupportsLight: (a: AccentId) => canUseLight(a),
+      appearanceTheme,
+      tokens,
     }),
-    [theme, mode, accent, isPro, setMode, setAccent],
+    [theme, mode, accent, isPro, setMode, setAccent, appearanceTheme, tokens],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
@@ -170,4 +222,18 @@ export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
   return ctx;
+}
+
+/**
+ * Returns the active semantic-token palette. Re-renders the calling
+ * component whenever mode or appearance theme changes.
+ *
+ *   const t = useTokens();
+ *   <View style={[styles.card, { backgroundColor: t.bgCard }]}>
+ *
+ * Falls back to dark-mode tokens if no ThemeProvider is mounted.
+ */
+export function useTokens(): Tokens {
+  const ctx = useContext(ThemeContext);
+  return ctx?.tokens ?? DEFAULT_TOKENS;
 }

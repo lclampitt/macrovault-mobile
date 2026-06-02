@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ChevronRight, Play } from 'lucide-react-native';
-import { DS, Font, Radius, Tabular } from '../../lib/design-system';
+import { Font, Radius, Tabular } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 
 type Props = {
   name: string;
@@ -13,25 +14,32 @@ export default function ContinueLastBanner({
   elapsedMin,
   onResume,
 }: Props) {
+  const t = useTokens();
   return (
     <View style={styles.outer}>
       <Pressable
         onPress={onResume}
-        style={({ pressed }) => [styles.banner, pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.banner,
+          { backgroundColor: t.primaryTintBg, borderColor: t.primaryTintBorder },
+          pressed && styles.pressed,
+        ]}
         accessibilityRole="button"
         accessibilityLabel={`Continue last workout: ${name}`}
       >
-        <View style={styles.iconBubble}>
-          <Play size={14} color="#000" fill="#000" strokeWidth={0} />
+        <View style={[styles.iconBubble, { backgroundColor: t.primary }]}>
+          <Play size={14} color={t.textOnPrimary} fill={t.textOnPrimary} strokeWidth={0} />
         </View>
         <View style={styles.body}>
-          <Text style={styles.label}>CONTINUE LAST WORKOUT</Text>
-          <Text style={styles.title} numberOfLines={1}>
+          <Text style={[styles.label, { color: t.primary }]}>CONTINUE LAST WORKOUT</Text>
+          <Text style={[styles.title, { color: t.textPrimary }]} numberOfLines={1}>
             {name || 'Untitled workout'}
-            <Text style={[styles.elapsed, Tabular]}> · {elapsedMin}m elapsed</Text>
+            <Text style={[styles.elapsed, Tabular, { color: t.textTertiary }]}>
+              {' '}· {elapsedMin}m elapsed
+            </Text>
           </Text>
         </View>
-        <ChevronRight size={16} color={DS.accent} strokeWidth={2.5} />
+        <ChevronRight size={16} color={t.primary} strokeWidth={2.5} />
       </Pressable>
     </View>
   );
@@ -46,8 +54,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: 'rgba(16, 185, 129, 0.06)',
-    borderColor: DS.accentBorder,
     borderWidth: 1,
     borderRadius: Radius.card,
     paddingHorizontal: 14,
@@ -60,7 +66,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 9,
-    backgroundColor: DS.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -70,18 +75,15 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: Font.bold,
     fontSize: 10,
-    color: DS.accent,
     letterSpacing: 0.6,
     marginBottom: 2,
   },
   title: {
     fontFamily: Font.semibold,
     fontSize: 13,
-    color: DS.text,
   },
   elapsed: {
     fontFamily: Font.medium,
     fontSize: 12,
-    color: DS.textTertiary,
   },
 });

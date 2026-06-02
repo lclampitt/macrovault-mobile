@@ -2,12 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeIn } from 'react-native-reanimated';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { DS } from '../../lib/design-system';
+import { useTokens } from '../../lib/theme-context';
 import { useWorkoutTemplates } from '../../hooks/useWorkoutTemplates';
 import { useRecentWorkouts } from '../../hooks/useRecentWorkouts';
 import { useTemplateActions } from '../../hooks/useTemplateActions';
+import { useLastSessionSkips } from '../../hooks/useLastSessionSkips';
 import { useDeleteWorkout } from '../../hooks/useDeleteWorkout';
 import { useActiveWorkout } from '../../lib/active-workout-context';
 import type { WorkoutTemplate } from '../../hooks/useWorkoutTemplates';
@@ -21,11 +21,13 @@ import ContinueLastBanner from './ContinueLastBanner';
 
 export default function WorkoutHubV2() {
   const router = useRouter();
+  const t = useTokens();
   const { templates } = useWorkoutTemplates();
   const { workouts, refetch: refetchWorkouts } = useRecentWorkouts(20);
   const { state, start, loadTemplate } = useActiveWorkout();
   const { remove: deleteWorkout } = useDeleteWorkout(() => refetchWorkouts());
   const { fetchTemplate } = useTemplateActions();
+  const { fetchSkips } = useLastSessionSkips();
   const [tab, setTab] = useState<HubTab>('templates');
 
   // Days-of-month roughly — count workouts logged in current month
@@ -67,7 +69,11 @@ export default function WorkoutHubV2() {
     }
     const { data: loaded, error } = await fetchTemplate(t.id);
     if (error || !loaded) return;
-    loadTemplate(loaded);
+    // Look up which exercises were skipped on the most recent prior session
+    // of this template; the names flow into the new session as a transient
+    // "Last: skipped" hint.
+    const skippedNames = await fetchSkips(loaded.name);
+    loadTemplate(loaded, skippedNames);
     router.push('/active-workout?from=template');
   }
 
@@ -98,11 +104,8 @@ export default function WorkoutHubV2() {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['bottom']}>
-      <LinearGradient
-        colors={['rgba(16, 185, 129, 0.08)', 'transparent']}
-        style={styles.topSpine}
-        pointerEvents="none"
-      />
+      {/* Top emerald glow moved to the app shell — see _layout.tsx's
+          <TopGradientGlow />. */}
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -171,14 +174,6 @@ export default function WorkoutHubV2() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: DS.bg,
-  },
-  topSpine: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 120,
   },
   scroll: {
     flex: 1,
